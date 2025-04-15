@@ -9,9 +9,9 @@ export interface BaseFinancialStatement {
 
 export interface FinancialStatement extends BaseFinancialStatement{
     /** @override */
-    filingData: Array<Record<string, string|number>>;
+    filingData?: Array<Record<string, string|number>>;
 }
 export interface EquityStatement extends BaseFinancialStatement {
     /** @override */
-    filingData: Array<Record<string, string[]|number[]>>
+    filingData?: Array<Record<string, string[]|number[]>>
 }
