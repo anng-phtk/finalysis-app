@@ -2,25 +2,7 @@ import { HTTPResponseError, RemoteFetchError } from "../error-handlers/app-error
 import { Log, LoggingService } from "../logging/logging.types.js";
 
 import { createLoggerSvc } from "../logging/LoggingSvcImpl.js";
-
-export interface RemoteFileSvcConfig {
-    url: string;
-    headers?: Record<string, string>;
-    retry: number;
-    retryDelay: number;
-    backOff: 2 | 3 | 4;
-    timeout: number;
-}
-
-/**
- * Utility function to get the file extension from a URL.
- * @interface RemoteFileSvcConfig 
- * */
-
-export interface RemoteFileSvc {
-    getRemoteFile(url: string): Promise<string>;
-}
-
+import { RemoteFileSvc, RemoteFileSvcConfig } from "./remotefetch.types.js";
 
 class RemoteFileSvcImpl implements RemoteFileSvc {
     private config: RemoteFileSvcConfig;
@@ -121,3 +103,7 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
     }
 }
 
+
+export function createRemoteFetchSvc(remoteFetchConfig:RemoteFileSvcConfig, logger:LoggingService): RemoteFileSvc {
+    return new RemoteFileSvcImpl(remoteFetchConfig, logger); 
+}

@@ -17,4 +17,3 @@ export {createLoggerSvc } from './logging/LoggingSvcImpl.js';
 
 // utils
 export {replaceTokens} from './utils/stringUtil.js';
-export {getRemoteFile} from './utils/remoteFetchUtil.js';

@@ -7,7 +7,7 @@ import {createAPIRouter as APIRouter} from "./routes/api-router.js";
 import { createSocketServer } from "./web-sockets/web-socket-server.js";
 
 /** @import - shared packages */
-import { RedisServiceConfig, RedisService, createRedisSvc, replaceTokens, getRemoteFile } from "@finalysis-app/shared-utils";
+import { RedisServiceConfig, RedisService, createRedisSvc, replaceTokens } from "@finalysis-app/shared-utils";
 import {createLoggerSvc, LoggingService, LoggingServiceConfigOptions} from "@finalysis-app/shared-utils";
 
 configDotenv({path:'../../.env'})
@@ -36,7 +36,7 @@ const loggingOptions:LoggingServiceConfigOptions = {
     filename:'api-svc.log',
     type:'both',
     level:'debug',
-    maxLogSize:'10K',
+    maxLogSize:102400,
     backups:2,
     compress:true
 }
