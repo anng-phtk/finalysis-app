@@ -7,8 +7,9 @@ import {createAPIRouter as APIRouter} from "./routes/api-router.js";
 import { createSocketServer } from "./web-sockets/web-socket-server.js";
 
 /** @import - shared packages */
-import { RedisServiceConfig, RedisService, createRedisSvc, replaceTokens } from "@finalysis-app/shared-utils";
+import { RedisServiceConfig, RedisService, createRedisSvc, replaceTokens, createRemoteFetchSvc } from "@finalysis-app/shared-utils";
 import {createLoggerSvc, LoggingService, LoggingServiceConfigOptions} from "@finalysis-app/shared-utils";
+import { RemoteFileSvcConfig } from "@finalysis-app/shared-utils/dist/utils/remotefetch.types.js";
 
 configDotenv({path:'../../.env'})
 
@@ -36,7 +37,7 @@ const loggingOptions:LoggingServiceConfigOptions = {
     filename:'api-svc.log',
     type:'both',
     level:'debug',
-    maxLogSize:102400,
+    maxLogSize:10240,
     backups:2,
     compress:true
 }
@@ -53,9 +54,24 @@ app.get('/test', async (req:Request, res:Response)=> {
         accession:'000000248825000012',
         cik:'2488'
     });
-    const fetchRes = await getRemoteFile(url);
-    console.log(fetchRes.substring(0, 100));
 
+    const fileSvc = createRemoteFetchSvc({
+        url:url,
+        retryDelay:1000,
+        retry:3,
+        backOff:2,
+        timeout:3000
+    } as RemoteFileSvcConfig,
+    createLoggerSvc({
+        type:"both",
+        env:"dev",
+        filename:'remote-fetch',
+        maxLogSize:102400,
+        compress:true,
+        backups:2
+    }));
+    let content:string = await fileSvc.getRemoteFile();
+    console.log(content.substring(0,100));
     res.status(200).send({
         'success':true,
         'string':`fetched file ${url}`

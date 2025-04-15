@@ -9,7 +9,7 @@ const loggingOptions:LoggingServiceConfigOptions = {
     filename:'websocket-svc.log',
     type:'both',
     level:'debug',
-    maxLogSize:'10K',
+    maxLogSize:10000,
     backups:2,
     compress:true
 }

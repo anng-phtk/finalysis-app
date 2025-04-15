@@ -19,10 +19,11 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
      * @returns {Promise<string>} - A promise that resolves to the content of the remote file as a string.
      * @throws {HTTPResponseError} - Throws an error if the fetch fails or if the response is not ok.
      */
-    async getRemoteFile(): Promise<string> {
-        let url = this.config.url;
+    async getRemoteFile(fileURL?:string, override?:boolean): Promise<string> {
+        let url:string = (override)? fileURL || this.config.url : this.config.url;
         let response: Response;
-        this.log.info('Fetching remote file from URL:', this.config.url);
+        
+        this.log.debug('Start fetching remote file from URL:', url);
 
         while (this.config.retry > 0) {
             try {
@@ -35,6 +36,8 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
                 });
 
                 if (response.ok) {
+                    this.log.debug(`Called ${url} and got ${response.ok} for file with ${response.headers.get('content-type')}`);
+
                     const contentType = response.headers.get('content-type');
                     if (contentType && contentType.includes('application/json')) {
                         const content = await response.json();
@@ -42,10 +45,15 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
                         return JSON.stringify(content); // Return parsed object
                         //return content;
                     } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain') || contentType.includes('application/xml'))) {
+
                         const content = await response.text();
+
+                        this.log.debug(`Called ${url} and got ${response.ok}. Returning body ${content.substring(0, 100)}`);
+
                         return content;
 
                     } else {
+                        this.log.error(`Called ${url} and got ${response.status}.`);
                         switch (response.status) {
                             case 400:
                                 throw new HTTPResponseError('Bad Request', response.statusText, response.status);
@@ -57,6 +65,7 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
                                 throw new HTTPResponseError('Not Found', response.statusText, response.status);
                             case 429:
                                 // Handle rate limiting
+                                this.log.error(`Got rate limited. Retrying ${url}`);
                                 throw new HTTPResponseError('Too Many Requests', response.statusText, response.status);
                             case 500:
                                 throw new HTTPResponseError('Internal Server Error', response.statusText, response.status);
@@ -86,19 +95,21 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
                             }, this.config.retryDelay);
                         });
 
+                        this.log.error(`Got rate limited. Retrying ${url} ${this.config.retry} more times before giving up`);
                         // promise completed, time to rety from the start
                         continue;
                         // while loop instead of a self call
                         //this.getRemoteFile();
+                        
                     //}
                 }
 
-                this.log.error(`Retries Left: ${this.config.retry}`);
+                this.log.error(`Giving up ${this.config.retry}`);
                 throw error;
             }
         }
 
-        this.log.error(`All retries have been exausted for ${this.config.url}`);
+        this.log.error(`All retries have been exausted for ${url}`);
         throw new RemoteFetchError('Unexpected Error');
     }
 }

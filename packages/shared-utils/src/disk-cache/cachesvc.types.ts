@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import { homedir } from "os";
 import path from "path";
 import { RemoteFileSvc, RemoteFileSvcConfig } from "../utils/remotefetch.types.js";
-import { createRemoteFetchSvc } from "../utils/RemoteFetchSvc.js";
+import { createRemoteFetchSvc } from "../utils/RemoteFetchSvcImpl.js";
 import { createLoggerSvc } from "../logging/LoggingSvcImpl.js";
 
 /** 
@@ -25,7 +25,7 @@ export interface CacheSvcConfig {
 export interface CacheSvc {
     
     getFileFromCache():Promise<string>;
-    refreshFileInCache():boolean;
+    refreshFileInCache():Promise<boolean>;
     writeFileToCache():Promise<boolean>;
 }
 
@@ -42,19 +42,22 @@ class CacheSvcImpl implements CacheSvc {
     public async getFileFromCache(): Promise<string> {
         try {
             // check if file is in cache
-            const file:Buffer = await fs.promises.readFile(path.join(homedir(), this.config.cacheDir, this.config.fileName), {encoding:'utf-8'}); 
+            const file = await fs.promises.readFile(path.join(homedir(), this.config.cacheDir, this.config.fileName), {encoding:'utf-8'}); 
             // if its not get it from remote location
             if (!file) {
-                const fileFetcher:RemoteFileSvc = createRemoteFetchSvc({
-                    url:'',
+                const fileFetcherSvc:RemoteFileSvc = createRemoteFetchSvc({
+                    url:this.config.fileURL,
                     retry:3,
                     backOff:3,
                     retryDelay:1000,
                     timeout:5000
                 } as RemoteFileSvcConfig, 
                 createLoggerSvc({type:'both'} as LoggingServiceConfigOptions));
+
+                // write this file to cache
+                //const remoteFile:Promise<string> = await fileFetcherSvc.getRemoteFile();
             }
-            // write this file to cache
+            
 
 
             // return the content
@@ -73,6 +76,18 @@ class CacheSvcImpl implements CacheSvc {
      * @returns {Promise<boolean>} - returns if file was written to cache
      */
 
-    private writeFiletoCache()
+    public async writeFileToCache():Promise<boolean> {
+
+        return false;
+    }
+    /**
+     * The method can be invoked by external callers. But generally we will manage refreshing cached documents based on how old the exiting file is
+     * @override
+     * @returns {Promise<boolean>} - returns if file was written to cache
+     */
+    public async refreshFileInCache(): Promise<boolean> {
+        
+        return false;
+    }
 
 }

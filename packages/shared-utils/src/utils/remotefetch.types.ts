@@ -11,7 +11,6 @@ export interface RemoteFileSvcConfig {
  * Utility function to get the file extension from a URL.
  * @interface RemoteFileSvcConfig 
  * */
-
 export interface RemoteFileSvc {
-    getRemoteFile(url: string): Promise<string>;
+    getRemoteFile(fileURL?:string, overrideConfigURL?:boolean): Promise<string>;
 }
