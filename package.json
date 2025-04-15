@@ -1,0 +1,26 @@
+{
+  "name": "finalysis-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Anang A. Phatak",
+  "license": "UNLICENSED",
+  "description": "",
+  "workspaces": [
+    "apps/api-svr",
+    "apps/backend-wrkr",
+    "packages/shared-utils"
+  ],
+  "devDependencies": {
+    "@types/dotenv": "^6.1.1",
+    "@types/node": "^22.14.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0"
+  }
+}

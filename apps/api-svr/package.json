@@ -1,0 +1,24 @@
+{
+  "name": "@finalysis-app/api-svr",
+  "version": "1.0.0",
+  "description": "API Server to handle ReST calls to fetch SEC.Gov docs and parse and store them to DB",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node ./dist/server.js"
+    
+  },
+  "author": "Anang A. Phatak",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^5.1.0",
+    "ws": "^8.18.1",
+    "@finalysis-app/shared-utils":"*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/ws": "^8.18.1"
+  }
+}

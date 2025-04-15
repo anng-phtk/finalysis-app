@@ -1,0 +1,21 @@
+// packages/remote-fetch-svc/tsconfig.json
+{
+    // 1. Extend the root configuration
+    "extends": "../../tsconfig.json", // Relative path to the root tsconfig.json
+
+    // 2. Define compiler options SPECIFIC to this package
+    "compilerOptions": {
+      
+      "outDir": "./dist",   // Where to output compiled files (JS, .d.ts, .map) for THIS package
+      "rootDir": "./src"    // Optional but recommended: Specify the root directory of source files for this package
+    },
+  
+    // 3. Specify EXACTLY which files to include for THIS package's compilation
+    //    This prevents TS from trying to compile files outside this package's 'src' folder.
+    "include": ["src/**/*"],
+  
+    // 4. Specify files/folders to exclude WITHIN this package
+    //    Excludes node_modules within this specific package and its own output directory.
+    //    It inherits excludes from the root config too.
+    "exclude": ["node_modules", "dist"]
+  }

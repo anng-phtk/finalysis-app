@@ -1,0 +1,24 @@
+{
+  "name": "@finalysis-app/shared-utils",
+  "version": "1.0.0",
+  "description": "Shared code for logging, models, dataconnections, Redis message and queue handling, etc.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/ioredis": "^4.28.10",
+    "@types/log4js": "^0.0.33",
+    "@types/mongodb": "^4.0.6"
+  },
+  "dependencies": {
+    "ioredis": "^5.6.0",
+    "log4js": "^6.9.1",
+    "mongodb": "^6.15.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "author": "Anang A. Phatak",
+  "license": "UNLICENSED"
+}
