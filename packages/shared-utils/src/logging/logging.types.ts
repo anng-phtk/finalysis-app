@@ -14,7 +14,7 @@ export interface LoggingServiceConfigOptions {
     filename?: string; // Only used if type is 'file' or 'both'
     level?: string; // Log level (default: 'info')
     env: 'dev' | 'prod'; // Environment (default: 'dev')
-    maxLogSize?: string; // Max size of log file in bytes (default: 10MB)
+    maxLogSize?: number; // Max size of log file in bytes (default: 10MB)
     backups?: number; // Number of backup files to keep (default: 3)
     compress?: boolean; // Whether to compress backup files (default: true)
 }

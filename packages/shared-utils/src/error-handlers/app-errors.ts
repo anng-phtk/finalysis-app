@@ -11,7 +11,7 @@ export class BaseAppError extends Error {
         this.name = this.constructor.name;
         this.statusCode = statusCode;
 
-        if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
+        //if (Error.ca) Error.captureStackTrace(this, this.constructor);
     }
 }
 
@@ -45,6 +45,13 @@ export class HTTPResponseError extends BaseAppError {
     constructor(message:string, statusText:string, statusCode:number) {
         super(message, statusCode);
         this.statusText = statusText;
-        if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
+        //if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+export class RemoteFetchError extends BaseAppError {
+    constructor(message: string = 'Remote Fetch Failed') {
+        super(message); // Pass message and status code to base
+        this.name = this.constructor.name;
     }
 }

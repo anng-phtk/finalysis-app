@@ -1,3 +1,9 @@
 {
-    "terminal.integrated.autoReplies": {}
+    "terminal.integrated.autoReplies": {},
+    "github.copilot.enable": {
+        "*": false,
+        "plaintext": false,
+        "markdown": false,
+        "scminput": false
+    }
 }

@@ -5,7 +5,9 @@
 
     // 2. Define compiler options SPECIFIC to this package
     "compilerOptions": {
-      
+      "skipLibCheck": true, // Skip type checking of declaration files (.d.ts)
+      "esModuleInterop": true, // Enables emit interoperability between CommonJS and ES Modules
+      "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references to the same file
       "outDir": "./dist",   // Where to output compiled files (JS, .d.ts, .map) for THIS package
       "rootDir": "./src"    // Optional but recommended: Specify the root directory of source files for this package
     },
