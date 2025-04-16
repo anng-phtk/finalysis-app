@@ -19,3 +19,6 @@ export {createLoggerSvc } from './logging/LoggingSvcImpl.js';
 export {replaceTokens} from './utils/stringUtil.js';
 export {RemoteFileSvc, RemoteFileSvcConfig} from './utils/remotefetch.types.js';
 export {createRemoteFetchSvc} from './utils/RemoteFetchSvcImpl.js';
+
+// disk cache
+export * from './disk-cache/cachesvc.types.js';

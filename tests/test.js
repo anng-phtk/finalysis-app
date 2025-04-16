@@ -9,3 +9,22 @@ function getFileExtension(filepath) {
 
 
 console.log(getFileExtension(myfilepath));
+
+
+const fileSvc = createRemoteFetchSvc({
+        url:url,
+        retryDelay:1000,
+        retry:3,
+        backOff:2,
+        timeout:3000
+    } as RemoteFileSvcConfig,
+    createLoggerSvc({
+        type:"both",
+        env:"dev",
+        filename:'remote-fetch',
+        maxLogSize:102400,
+        compress:true,
+        backups:2
+    }));
+    let content:string = await fileSvc.getRemoteFile();
+    console.log(content.substring(0,100));

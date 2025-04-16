@@ -9,7 +9,10 @@ import { createSocketServer } from "./web-sockets/web-socket-server.js";
 /** @import - shared packages */
 import { RedisServiceConfig, RedisService, createRedisSvc, replaceTokens, createRemoteFetchSvc } from "@finalysis-app/shared-utils";
 import {createLoggerSvc, LoggingService, LoggingServiceConfigOptions} from "@finalysis-app/shared-utils";
-import { RemoteFileSvcConfig } from "@finalysis-app/shared-utils/dist/utils/remotefetch.types.js";
+import { RemoteFileSvcConfig } from "@finalysis-app/shared-utils";
+import { CacheSvc, CacheSvcConfig, CacheSvcImpl } from "@finalysis-app/shared-utils";
+import { homedir } from "os";
+import path from "path";
 
 configDotenv({path:'../../.env'})
 
@@ -55,30 +58,28 @@ app.get('/test', async (req:Request, res:Response)=> {
         cik:'2488'
     });
 
-    const fileSvc = createRemoteFetchSvc({
-        url:url,
-        retryDelay:1000,
-        retry:3,
-        backOff:2,
-        timeout:3000
-    } as RemoteFileSvcConfig,
-    createLoggerSvc({
-        type:"both",
-        env:"dev",
-        filename:'remote-fetch',
-        maxLogSize:102400,
-        compress:true,
-        backups:2
-    }));
-    let content:string = await fileSvc.getRemoteFile();
-    console.log(content.substring(0,100));
+    const dirPath = homedir();
+    const cachedFileConfig:CacheSvcConfig = {
+        cacheDir:"AMD",
+        fileName:'R1.htm',
+        fileURL:url,
+        refreshAfter:300
+    }
+    const cacheLogger:LoggingService = createLoggerSvc({
+        type:'both',
+        env:'dev'
+    });
+    const cachedFile = new CacheSvcImpl(cachedFileConfig, cacheLogger);
+    cachedFile.getFileFromCache();
+    
     res.status(200).send({
         'success':true,
         'string':`fetched file ${url}`
     });
 });
 
-const [port, socketport] = [3000, 3001];
+const port:number = Number(process.env.API_SVR_PORT) || 3000
+const socketport:number = Number(process.env.WS_SVR_PORT) || 3001;
 
 //start web serverip
 app.listen(port, () => {
