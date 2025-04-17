@@ -87,7 +87,7 @@ class WebSocketServiceImpl implements WebSocketService {
 
 
 let wssInstance:WebSocketService|null;
-export const createWebSocketSrvrSvc = (socketport: number, loggingSvc:LoggingService):WebSocketService => {
+export const createWebSocketSvc = (socketport: number, loggingSvc:LoggingService):WebSocketService => {
 
     if (!wssInstance) wssInstance = new WebSocketServiceImpl(socketport, loggingSvc);
 

@@ -77,7 +77,7 @@ const cachedFile:CacheSvc = createFetchFileSvc(cachedFileConfig, remotefetcher, 
 
 
 app.get('/test', async (req:Request, res:Response)=> {
-    const apiLogger = logger.getLogger('apiserver');
+    const apiLogger = logger.getLogger('api-server');
     apiLogger.debug('[START] /test');
 
     let paddedCIK:string = '2488'.padStart(10, '0');
