@@ -67,8 +67,7 @@ const remotefetcher:RemoteFileSvc = createRemoteFetchSvc({
  */
 const cachedFileConfig:CacheSvcConfig = {
     cacheBaseDir:'finalysis-app',   // will stay unchanged through out the life of our app
-    maxCacheWriteRetry:2,
-    refreshAfter:300
+    maxCacheWriteRetry:2
 };
 const cachedFile:CacheSvc = createCacheSvc(cachedFileConfig, remotefetcher, logger);
 
@@ -90,7 +89,8 @@ app.get('/test', async (req:Request, res:Response)=> {
     await cachedFile.getFileFromCache({
         fileName:'R1.htm',
         fileURL:url,
-        subDir:'AMD'
+        subDir:'AMD',
+        canRefresh:false
     } as CacheFileOptions);
     
     res.status(200).send({
