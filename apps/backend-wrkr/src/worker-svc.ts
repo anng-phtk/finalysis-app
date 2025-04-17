@@ -14,39 +14,29 @@ const redisConfig:RedisServiceConfig= {
     }
 };
 
-const redisLoggerSvc:LoggingService =  createLoggerSvc({
-    env:'dev',
-    type:'both',
-    filename:'redis'
-});
-const redisSvc:RedisService = createRedisSvc(redisConfig, redisLoggerSvc); 
-
 
 const loggingOptions:LoggingServiceConfigOptions = {
     env:'dev',
-    filename:'worker-svc.log',
     type:'both',
     level:'debug',
-    maxLogSize:'10K',
+    maxLogSize:10000,
     backups:2,
     compress:true
 }
 
-const logger:LoggingService = createLoggerSvc(loggingOptions);
-const workerLogger = logger.getLogger('worker');
+const wrkrLoggerSvc:LoggingService = createLoggerSvc(loggingOptions);
+const redisSvc:RedisService = createRedisSvc(redisConfig, wrkrLoggerSvc); 
+const workerLogger = wrkrLoggerSvc.getLogger('worker-svc');
+    
 
-
-const channels:string[] = ['ticker']
-
+const channels:string[] = ['ticker:cik']
 redisSvc.getSubscriberClient().on('connect', ()=> {
+
     workerLogger.debug('redis has connected in subscriber mode');
 
     redisSvc.getSubscriberClient().subscribe(...channels, (err, count)=> {
-        workerLogger.debug(`Subscribing to ${count} channels`);
-
-        
+        workerLogger.debug(`Subscribing to ${count} channels`);        
     });
-
 
     redisSvc.getSubscriberClient().on('message', (channel, message)=> {
         workerLogger.debug(`Got a message from  ${channel} :  ${message}`);
