@@ -13,10 +13,9 @@ class RedisServiceImpl implements RedisService {
     private commandClient:Redis;
     private subscriberClient:Redis;
     private log:Log;
-    
     /** @todo: private logger: // no logger yet */
-    public constructor(config:RedisServiceConfig, logger:LoggingService) {
-        this.log = logger.getLogger('redis');
+    public constructor(config:RedisServiceConfig, loggingSvc:LoggingService) {
+        this.log = loggingSvc.getLogger('redis-logger');
         // create command client
         this.commandClient = new Redis(config.commandConnectionOptions);
         
@@ -106,7 +105,7 @@ class RedisServiceImpl implements RedisService {
 
 // control instance creation
 let redisSvsInstance:RedisService|null;
-export function createRedisSvc(config:RedisServiceConfig, logger:LoggingService):RedisService {
-    if (!redisSvsInstance) redisSvsInstance = new RedisServiceImpl(config, logger);
+export function createRedisSvc(config:RedisServiceConfig, loggingSvc:LoggingService):RedisService {
+    if (!redisSvsInstance) redisSvsInstance = new RedisServiceImpl(config, loggingSvc);
     return redisSvsInstance;
 }

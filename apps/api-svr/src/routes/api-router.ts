@@ -9,8 +9,10 @@ import {BaseAppError, ValidationError, NotFoundError, AuthenticationError } from
  * @param redisSvc 
  * @returns {Router}
  */
-export function createAPIRouter (redisSvc:RedisService, apiLogger:Log):Router {
+export function createAPIRouter (redisSvc:RedisService, loggingSvc:LoggingService):Router {
     const router:Router = express.Router();
+    const apiLogger:Log = loggingSvc.getLogger('route-logger');
+    
     router.get('/v1/cik/:ticker', async (req:Request, res:Response)=> {
 
         const ticker:string = req.params.ticker ?? '';

@@ -55,3 +55,23 @@ export class RemoteFetchError extends BaseAppError {
         this.name = this.constructor.name;
     }
 }
+export enum DiskCacheFailureCodes {
+    Unknown = 'UNKNOWN',
+    FileSystemRead = 'FS_READ',
+    FileSystemWrite = 'FS_WRITE',
+    FileSystemMkdir = 'FS_MKDIR',
+    FetchFailed = 'REMOTE_FETCH', // If wrapping fetch errors
+    InvalidState = 'INVALID_STATE'
+}
+
+export class DiskCacheError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly code: DiskCacheFailureCodes = DiskCacheFailureCodes.Unknown,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message);
+        this.name = 'CacheError';
+        // ... captureStackTrace ...
+    }
+}

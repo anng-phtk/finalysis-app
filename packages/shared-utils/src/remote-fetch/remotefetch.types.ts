@@ -1,5 +1,4 @@
 export interface RemoteFileSvcConfig {
-    url: string;
     headers?: Record<string, string>;
     retry: number;
     retryDelay: number;
@@ -12,5 +11,5 @@ export interface RemoteFileSvcConfig {
  * @interface RemoteFileSvcConfig 
  * */
 export interface RemoteFileSvc {
-    getRemoteFile(fileURL?:string, overrideConfigURL?:boolean): Promise<string>;
+    getRemoteFile(fileURL:string): Promise<string>;
 }

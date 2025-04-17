@@ -95,7 +95,7 @@ class LoggingServiceImpl implements LoggingService {
 // control and enforce singleton
 let loggingSvcIntance:LoggingService|null;
 export function createLoggerSvc(options:LoggingServiceConfigOptions):LoggingService {
-    
+    /** if we need a singleton logging svc. here we want different loggers running different files */
     if (!loggingSvcIntance) loggingSvcIntance = new LoggingServiceImpl(options)
     return loggingSvcIntance;
 }
