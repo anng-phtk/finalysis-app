@@ -72,7 +72,7 @@ const cachedFileConfig:CacheSvcConfig = {
 const cachedFile:CacheSvc = createCacheSvc(cachedFileConfig, remotefetcher, logger);
 
 
-
+// run endpoint to test
 app.get('/test', async (req:Request, res:Response)=> {
     const apiLogger = logger.getLogger('api-server');
     apiLogger.debug('[START] /test');
