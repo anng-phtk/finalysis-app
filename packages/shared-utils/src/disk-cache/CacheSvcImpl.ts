@@ -110,7 +110,7 @@ class CacheSvcImpl implements CacheSvc {
 
 // enforce singleton
 let instance:CacheSvc|null;
-export function createFetchFileSvc(config:CacheSvcConfig, remoteFileSvc:RemoteFileSvc, loggingSvc:LoggingService):CacheSvc {
+export function createCacheSvc(config:CacheSvcConfig, remoteFileSvc:RemoteFileSvc, loggingSvc:LoggingService):CacheSvc {
     if (!instance) instance = new CacheSvcImpl(config,remoteFileSvc,loggingSvc);
     return instance;
 }

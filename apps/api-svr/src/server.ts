@@ -47,9 +47,7 @@ const redisConfig:RedisServiceConfig= {
         port: Number(process.env.REDIS_PORT)
     }
 };
-
 const redisSvc:RedisService = createRedisSvc(redisConfig, logger); 
-
 
 
 /**
@@ -72,7 +70,7 @@ const cachedFileConfig:CacheSvcConfig = {
     maxCacheWriteRetry:2,
     refreshAfter:300
 };
-const cachedFile:CacheSvc = createFetchFileSvc(cachedFileConfig, remotefetcher, logger);
+const cachedFile:CacheSvc = createCacheSvc(cachedFileConfig, remotefetcher, logger);
 
 
 
