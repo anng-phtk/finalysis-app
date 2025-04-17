@@ -44,6 +44,8 @@ class CacheSvcImpl implements CacheSvc {
 
                 if (fileOptions.canRefresh) {
                     const fileModifiedDate = (await fs.promises.stat(path.join(this.baseDirPath, fileOptions.subDir, fileOptions.fileName))).mtime;
+                
+                    this.cachelog.debug(`[SUCCESS] Found file ${fileOptions.fileName} in cache. It was last modified on ${fileModifiedDate}.`);
                     const modifiedDate:Date = new Date(fileModifiedDate);
                     const fileAgeInMillis:number = Date.now() - modifiedDate.getTime();
                     const fileAgeInDays = Math.floor(fileAgeInMillis/this.numMilisInADay)
@@ -58,7 +60,6 @@ class CacheSvcImpl implements CacheSvc {
                     encoding:'utf-8'
                 }); 
                 
-                this.cachelog.debug(`[SUCCESS] Found file ${fileOptions.fileName} in cache. It was last modified on ${modifiedDate}.`);
                 // if file is more than 60 days old, we need a new one only if refreshCache is set to true
 
 
