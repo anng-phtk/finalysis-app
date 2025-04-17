@@ -10,7 +10,7 @@ import { createWebSocketSvc, WebSocketService } from "./web-sockets/WebSocketSer
 import { createRedisSvc,  RedisService, RedisServiceConfig} from "@finalysis-app/shared-utils"
 import {createRemoteFetchSvc, RemoteFileSvc, RemoteFileSvcConfig } from "@finalysis-app/shared-utils";
 import {createLoggerSvc, LoggingService, LoggingServiceConfigOptions} from "@finalysis-app/shared-utils";
-import { createFetchFileSvc, CacheSvc, CacheSvcConfig, CacheFileOptions } from "@finalysis-app/shared-utils";
+import { createCacheSvc, CacheSvc, CacheSvcConfig, CacheFileOptions } from "@finalysis-app/shared-utils";
 import {replaceTokens} from "@finalysis-app/shared-utils";
 
 // read the env vars
@@ -99,8 +99,8 @@ app.get('/test', async (req:Request, res:Response)=> {
     });
 });
 
-const port:number = Number(process.env.API_SVR_PORT) || 3000
-const socketport:number = Number(process.env.WS_SVR_PORT) || 3001;
+const port:number = Number(process.env.API_SVR_PORT)
+const socketport:number = Number(process.env.WS_SVR_PORT);
 
 //start web serverip
 app.listen(port, () => {

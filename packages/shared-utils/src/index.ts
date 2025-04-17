@@ -22,4 +22,4 @@ export {createRemoteFetchSvc} from './remote-fetch/RemoteFetchSvcImpl.js';
 
 // disk cache
 export {CacheSvc, CacheSvcConfig, CacheFileOptions} from './disk-cache/cachesvc.types.js';
-export {createFetchFileSvc} from './disk-cache/CacheSvcImpl.js';
+export {createCacheSvc} from './disk-cache/CacheSvcImpl.js';
