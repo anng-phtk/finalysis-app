@@ -9,8 +9,8 @@
  * */
 
 export interface CacheSvcConfig {
-    cacheBaseDir:string|"finalysis-app";  
-    maxCacheWriteRetry:number|2;  
+    cacheBaseDir:string;  
+    maxCacheWriteRetry:number;  
 }
 
 export interface CacheSvc {
