@@ -25,4 +25,4 @@ export interface CacheFileOptions {
     fileURL:string;
     canRefresh:boolean;
     refreshAfterDays?:number; // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec 
-}
+} 
