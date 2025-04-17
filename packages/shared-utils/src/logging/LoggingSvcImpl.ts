@@ -62,7 +62,7 @@ class LoggingServiceImpl implements LoggingService {
         const composedConfig: Configuration = {
             appenders,
             categories: {
-                default: { appenders: appendersList, level: level || 'error' },
+                default: { appenders: appendersList, level: level || '' },
                 //apiserver: { appenders: appendersList, level: 'debug' },
                 //websocket: { appenders: appendersList, level: 'debug' }
             }
