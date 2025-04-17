@@ -61,7 +61,8 @@ export enum DiskCacheFailureCodes {
     FileSystemWrite = 'FS_WRITE',
     FileSystemMkdir = 'FS_MKDIR',
     FetchFailed = 'REMOTE_FETCH', // If wrapping fetch errors
-    InvalidState = 'INVALID_STATE'
+    InvalidState = 'INVALID_STATE',
+    RefreshFailed = 'REFRESH_FAILED'
 }
 
 export class DiskCacheError extends BaseAppError {

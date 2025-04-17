@@ -10,18 +10,19 @@
 
 export interface CacheSvcConfig {
     cacheBaseDir:string|"finalysis-app";  
-    maxCacheWriteRetry:number|2;
-    refreshAfter?:number; // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec     
+    maxCacheWriteRetry:number|2;  
 }
 
 export interface CacheSvc {
     getFileFromCache(fileOptions:CacheFileOptions):Promise<string>;
-    refreshFileInCache():Promise<boolean>;
+    refreshFileInCache(fileOptions:CacheFileOptions):Promise<boolean>;
     writeFileToCache(content:string, fileOptions:CacheFileOptions):Promise<boolean>;
 }
 
 export interface CacheFileOptions {
     subDir:string; 
     fileName:string;
-    fileURL:string; 
+    fileURL:string;
+    canRefresh:boolean;
+    refreshAfterDays?:number; // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec 
 }
