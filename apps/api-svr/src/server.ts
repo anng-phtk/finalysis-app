@@ -4,7 +4,7 @@ import { configDotenv } from "dotenv";
 
 /** @import - all local servers */
 import {createAPIRouter as APIRouter} from "./routes/api-router.js";
-import { createSocketServer, WebSocketService } from "./web-sockets/WebSocketServerImpl.js";
+import { createWebSocketSvc, WebSocketService } from "./web-sockets/WebSocketServerImpl.js";
 
 /** @import - shared packages */
 import { createRedisSvc,  RedisService, RedisServiceConfig} from "@finalysis-app/shared-utils"
@@ -110,7 +110,7 @@ app.listen(port, () => {
 });
 
 // start websocket server
-const wss: WebSocketService = createSocketServer(socketport);
+const wss: WebSocketService = createWebSocketSvc(socketport, logger);
 //wss.
 // start API endpoints
 app.use('/api', APIRouter(redisSvc, logger));
