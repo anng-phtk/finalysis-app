@@ -5,6 +5,7 @@ import { homedir } from "os";
 import { Log, LoggingService } from "../logging/logging.types.js";
 import { RemoteFileSvc } from "../remote-fetch/remotefetch.types.js";
 import { CacheFileOptions, CacheSvc, CacheSvcConfig } from "./cachesvc.types.js";
+import { DiskCacheError, DiskCacheFailureCodes } from "../error-handlers/app-errors.js";
 
 
 class CacheSvcImpl implements CacheSvc {
@@ -13,6 +14,8 @@ class CacheSvcImpl implements CacheSvc {
     private cachelog:Log;
     private baseDirPath:string;
     private remoteFetcher;
+
+    private numMilisInADay:number = 1000*60*60*24;
 
     constructor(cacheSvcConfig:CacheSvcConfig, remoteFileSvc:RemoteFileSvc, logger:LoggingService) {
         this.config = cacheSvcConfig;
@@ -38,14 +41,26 @@ class CacheSvcImpl implements CacheSvc {
             try {
                 // check if file is in cache
                 this.cachelog.debug(`[IN PROGRESS] Looking for the file in cache.`);
+
+                if (fileOptions.canRefresh) {
+                    const fileModifiedDate = (await fs.promises.stat(path.join(this.baseDirPath, fileOptions.subDir, fileOptions.fileName))).mtime;
+                    const modifiedDate:Date = new Date(fileModifiedDate);
+                    const fileAgeInMillis:number = Date.now() - modifiedDate.getTime();
+                    const fileAgeInDays = Math.floor(fileAgeInMillis/this.numMilisInADay)
+                    
+                    if (fileOptions.refreshAfterDays && fileAgeInDays > fileOptions.refreshAfterDays) {
+                        // rewrite the file
+                        await this.refreshFileInCache(fileOptions);
+                    }
+                }
+                
                 const file:string = await fs.promises.readFile(path.join(this.baseDirPath, fileOptions.subDir, fileOptions.fileName), {
                     encoding:'utf-8'
                 }); 
-                const modifiedDate = (await fs.promises.stat(path.join(this.baseDirPath, fileOptions.subDir, fileOptions.fileName))).mtime;
-                
                 
                 this.cachelog.debug(`[SUCCESS] Found file ${fileOptions.fileName} in cache. It was last modified on ${modifiedDate}.`);
                 // if file is more than 60 days old, we need a new one only if refreshCache is set to true
+
 
                 return file;
                 
@@ -56,28 +71,33 @@ class CacheSvcImpl implements CacheSvc {
                 const err = error as NodeJS.ErrnoException
                 if (err.errno === -4058 && err.code === 'ENOENT' ) {
                     this.cachelog.error(`[RECOVERABLE ERROR] Either the file, or file and folder were not found locally.`);
-                    
                     // Starting retry 
                     this.cachelog.debug(`[IN PROGRESS] Trying to handle recoverable error. Creating the directory if it does not exist`);
+                    
                     await fs.promises.mkdir(path.join(this.baseDirPath, fileOptions.subDir), {recursive:true});
-
                     this.cachelog.debug(`[IN PROGRESS] Folder created (or it already exists)`);
-
+                    
                     this.cachelog.debug(`[IN PROGRESS] Fetching file from remote location.Look in remote-file-svc-log file for file download logs.`);
                     this.cachelog.debug(`[LOG BRANCH] remote-file-svc-log.`);
-
+                    
                     const content = await this.remoteFetcher.getRemoteFile(fileOptions.fileURL);
                     this.cachelog.debug(`[IN PROGRESS] fetched from remote ${fileOptions.fileURL}`);
+                    
                     await this.writeFileToCache(content, fileOptions);
                     this.cachelog.debug(`[IN PROGRESS] Now, retry file read operation`);
+
                     continue;
                 }
 
-                this.cachelog.error(`Unrecoverable error, failing`);    
-                throw error;
+                this.cachelog.error(`Unrecoverable error, ${error}`);   
+                throw new DiskCacheError('Unrecoverable error in reading file from cache. Unable to get file from local or remote location.', DiskCacheFailureCodes.Unknown); 
+                
             }
         }
-        return new Promise(rejects=>rejects(''));
+
+        // After the while loop
+        this.cachelog.error(`Failed to get file ${fileOptions.fileName} from cache after ${this.config.maxCacheWriteRetry ?? 2} attempts.`);
+        throw new DiskCacheError(`Failed to get file ${fileOptions.fileName} after retries`, DiskCacheFailureCodes.Unknown);
     }
 
     /**
@@ -92,8 +112,8 @@ class CacheSvcImpl implements CacheSvc {
             return true;
         }
         catch (error) {
-            this.cachelog.error(`File write error , failing`);   
-            throw error;
+            this.cachelog.error(`File write error , failing, ${error}`); 
+            throw new DiskCacheError('Failed to write file to cache', DiskCacheFailureCodes.FileSystemWrite);
         }
     }
     /**
@@ -101,8 +121,16 @@ class CacheSvcImpl implements CacheSvc {
      * @override
      * @returns {Promise<boolean>} - returns if file was written to cache
      */
-    public async refreshFileInCache(): Promise<boolean> {
+    public async refreshFileInCache(fileOptions:CacheFileOptions): Promise<boolean> {
         
+        try {
+            const content = await this.remoteFetcher.getRemoteFile(fileOptions.fileURL);
+            await this.writeFileToCache(content, fileOptions);
+            return true;
+        } catch (error) {
+            this.cachelog.error(`Failed to refresh disk cache ${error}`);
+            throw new DiskCacheError('Failed Cache Refresh', DiskCacheFailureCodes.RefreshFailed);
+        }
         return false;
     }
 
