@@ -1,6 +1,7 @@
+import { HTTPStatusCodes } from "../app-config/ApplicationConfig.js";
+
 export class BaseAppError extends Error {
     public readonly statusCode: number = 500;
-    
     /**
      * @override constructor
      */
@@ -72,6 +73,25 @@ export class DiskCacheError extends BaseAppError {
         public readonly innerError?: Error // Optional wrapped error
     ) {
         super(message);
+        this.name = 'CacheError';
+        // ... captureStackTrace ...
+    }
+}
+
+export enum SECOperationFailureCodes {
+    Unknown = 'UNKNOWN_EXCEPTION',
+    TickerNotFound='TICKER_NOT_FOUND',
+    ActiveJobInProgress='ACTIVE_JOB'
+}
+
+export class SECOperationError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly statusCode:number = HTTPStatusCodes.NotFound,
+        public readonly statusText:string = SECOperationFailureCodes.Unknown,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message, statusCode);
         this.name = 'CacheError';
         // ... captureStackTrace ...
     }

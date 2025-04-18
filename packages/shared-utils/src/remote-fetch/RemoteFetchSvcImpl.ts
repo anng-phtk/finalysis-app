@@ -1,7 +1,5 @@
 import { HTTPResponseError, RemoteFetchError } from "../error-handlers/app-errors.js";
 import { Log, LoggingService } from "../logging/logging.types.js";
-
-import { createLoggerSvc } from "../logging/LoggingSvcImpl.js";
 import { RemoteFileSvc, RemoteFileSvcConfig } from "./remotefetch.types.js";
 
 class RemoteFileSvcImpl implements RemoteFileSvc {
@@ -43,9 +41,9 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
                     if (contentType && contentType.includes('application/json')) {
                         const content = await response.json();
                         // Decide: Return object or stringify? Returning object is usually better.
-
-                        this.log.debug(`[FINISHED] Called ${url} and got ${response.ok}. Returning JSON:\n${content.substring(0, 100)}`);
-                        return JSON.stringify(content); // Return parsed object
+                        const content2String = JSON.stringify(content);
+                        this.log.debug(`[FINISHED] Called ${url} and got ${response.ok}. Returning JSON:\n${content2String.substring(0, 100)}`);
+                        return content2String; // Return parsed object
                         //return content;
                     } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain') || contentType.includes('application/xml'))) {
 
@@ -97,12 +95,10 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
                             return resolve(true);
                         }, retryDelay);
                     });
-
                     this.log.error(`[RETRY] Got rate limited. Retrying ${url} ${numRetry} more times before giving up`);
                     // promise completed, time to rety from the start
                     continue;
                 }
-
                 this.log.error(`[FINISHED] Giving up ${numRetry}. Throwing : ${error}`);
                 throw error;
             }

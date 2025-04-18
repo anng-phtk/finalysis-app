@@ -29,6 +29,7 @@ class CacheSvcImpl implements CacheSvc {
      * @returns {Promise<string>} - file content
      */
     public async getFileFromCache(fileOptions:CacheFileOptions): Promise<string> {
+        console.log('........................')
         let maxRetries:number = this.config.maxCacheWriteRetry;
         while (maxRetries > 0) {
 
@@ -41,8 +42,10 @@ class CacheSvcImpl implements CacheSvc {
             try {
                 // check if file is in cache
                 this.cachelog.debug(`[IN PROGRESS] Looking for the file in cache.`);
-
+                
+                // check if this is a type of file thats refreshable
                 if (fileOptions.canRefresh) {
+                    // if file is more than 60 days old, we need a new one only if refreshCache is set to true
                     const fileModifiedDate = (await fs.promises.stat(path.join(this.baseDirPath, fileOptions.subDir, fileOptions.fileName))).mtime;
                 
                     this.cachelog.debug(`[SUCCESS] Found file ${fileOptions.fileName} in cache. It was last modified on ${fileModifiedDate}.`);
@@ -60,9 +63,6 @@ class CacheSvcImpl implements CacheSvc {
                     encoding:'utf-8'
                 }); 
                 
-                // if file is more than 60 days old, we need a new one only if refreshCache is set to true
-
-
                 return file;
                 
             // if it fails, throw an error

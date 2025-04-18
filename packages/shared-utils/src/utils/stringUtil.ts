@@ -11,6 +11,11 @@ export function replaceTokens(tokenizedString:string, replacements:Record<string
     return newString;
 }
 
+/**
+ * 
+ * @param filepath 
+ * @returns string
+ */
 export function getFileExtension(filepath:string):string {
     let ext:string[] = filepath.toLowerCase().match(/(\.[htm|json|html|xml|txt]{1,4})$/g) || [''];
     console.log('found ', ext);

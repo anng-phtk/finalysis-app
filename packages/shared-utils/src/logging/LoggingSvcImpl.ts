@@ -38,7 +38,7 @@ class LoggingServiceImpl implements LoggingService {
         };
     
         if (type === 'file' || type === 'both') {
-            console.log('Configuring file appender...', filename);
+            console.log('Configuring multifile appender...');
             appenders['fileout'] = {
                 type: 'multiFile',
                 base: `logs`, //|| 'logs/app.log',
@@ -94,7 +94,7 @@ class LoggingServiceImpl implements LoggingService {
 
 // control and enforce singleton
 let loggingSvcIntance:LoggingService|null;
-export function createLoggerSvc(options:LoggingServiceConfigOptions):LoggingService {
+export function createLoggingSvc(options:LoggingServiceConfigOptions):LoggingService {
     /** if we need a singleton logging svc. here we want different loggers running different files */
     if (!loggingSvcIntance) loggingSvcIntance = new LoggingServiceImpl(options)
     return loggingSvcIntance;

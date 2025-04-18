@@ -9,7 +9,7 @@ import { createWebSocketSvc, WebSocketService } from "./web-sockets/WebSocketSer
 /** @import - shared packages */
 import { createRedisSvc,  RedisService, RedisServiceConfig} from "@finalysis-app/shared-utils"
 import {createRemoteFetchSvc, RemoteFileSvc, RemoteFileSvcConfig } from "@finalysis-app/shared-utils";
-import {createLoggerSvc, LoggingService, LoggingServiceConfigOptions} from "@finalysis-app/shared-utils";
+import {createLoggingSvc, LoggingService, LoggingServiceConfigOptions} from "@finalysis-app/shared-utils";
 import { createCacheSvc, CacheSvc, CacheSvcConfig, CacheFileOptions } from "@finalysis-app/shared-utils";
 import {replaceTokens} from "@finalysis-app/shared-utils";
 
@@ -32,7 +32,7 @@ const loggingOptions:LoggingServiceConfigOptions = {
     backups:2,
     compress:true
 }
-const logger:LoggingService = createLoggerSvc(loggingOptions);
+const logger:LoggingService = createLoggingSvc(loggingOptions);
 
 /**
  * Initialize Redis
