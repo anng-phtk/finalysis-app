@@ -83,6 +83,7 @@ export const JobsMetadata = {
         lookup_cik:'channel:lookup:cik'
     },
     JobNames:{
-        lookup_cik:'job:lookup:cik'
+        lookup_cik:'job:lookup:cik',
+        recent_filings:'job:lookup:recent_filings'
     }
 }

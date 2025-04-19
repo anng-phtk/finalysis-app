@@ -36,10 +36,15 @@ export function createAPIRouter (redisSvc:RedisService, loggingSvc:LoggingServic
             // if validation works, we should check for active jobs
             apiLogger.debug(`[IN PROGRESS] received and validated ticker ${ticker}.\n\t1. check if this ticker is in progress \n\t2. if yes, show 2xx and tell user to check sockets \n\t3. if no, add to active job`);
             
-            let activeJob = await redisSvc.getCommandClient().sismember(JobsMetadata.ActiveJobs.ticker,ticker);
-            if (activeJob) {
-                apiLogger.debug(`[IN PROGRESS] received and validated ticker ${ticker}.\n\t1.Job is in progress.\n\t2. Check job progess on websockets`);
-                throw new SECOperationError(`Job is already in progress for ${ticker}`, HTTPStatusCodes.AlreadyReported ,SECOperationFailureCodes.ActiveJobInProgress);
+            let dedupeCheckFlag:boolean = (process.env.JOB_DEDUPE_FLAG === "true")? true : false;
+            apiLogger.debug( `Setting the check for duplicate job to ${dedupeCheckFlag}. \n\tprocess.env.JOB_DEDUPE_FLAG=${process.env.JOB_DEDUPE_FLAG}\n\ttoggle value in .env`);
+
+            if (dedupeCheckFlag) {
+                let activeJob = await redisSvc.getCommandClient().sismember(JobsMetadata.ActiveJobs.ticker,ticker);
+                if (activeJob) {
+                    apiLogger.debug(`[IN PROGRESS] received and validated ticker ${ticker}.\n\t1.Job is in progress.\n\t2. Check job progess on websockets`);
+                    throw new SECOperationError(`Job is already in progress for ${ticker}`, HTTPStatusCodes.AlreadyReported ,SECOperationFailureCodes.ActiveJobInProgress);
+                }
             }
             
             // add the ticker to a set so we work only on unique jobs
@@ -49,7 +54,10 @@ export function createAPIRouter (redisSvc:RedisService, loggingSvc:LoggingServic
             
             // add a job to lookup cik from ticker
             apiLogger.debug(`[IN PROGRESS] REDIS Job: Adding 'ticker':${ticker} in set set:ticker`);
-            await redisSvc.getCommandClient().rpush(JobsMetadata.JobNames.lookup_cik, `${ticker}`);
+            const job = {
+                ticker:ticker
+            }
+            await redisSvc.getCommandClient().rpush(JobsMetadata.JobNames.lookup_cik, JSON.stringify(job));
 
             // if we accepted the job, return a 200 ok to the user
             apiLogger.debug(`[IN PROGRESS] Success job added; let the use know.`);

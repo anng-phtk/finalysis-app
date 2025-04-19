@@ -1,5 +1,5 @@
 //application configurations
-export {HTTPStatusCodes, JobsMetadata} from './app-config/ApplicationConfig.js';
+export { HTTPStatusCodes, JobsMetadata} from './app-config/ApplicationConfig.js';
 
 //redis utils
 export * from './redis/redis.types.js'; 

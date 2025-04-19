@@ -29,7 +29,6 @@ class CacheSvcImpl implements CacheSvc {
      * @returns {Promise<string>} - file content
      */
     public async getFileFromCache(fileOptions:CacheFileOptions): Promise<string> {
-        console.log('........................')
         let maxRetries:number = this.config.maxCacheWriteRetry;
         while (maxRetries > 0) {
 
