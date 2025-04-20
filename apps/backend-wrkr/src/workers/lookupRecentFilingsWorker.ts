@@ -16,40 +16,60 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
         let result:string = await redisJobSvc.getNextJob(JobsMetadata.JobNames.recent_filings);
                 
         // force the datatype
-        let filingsDTO = JSON.parse(result);
-        ticker = filingsDTO.ticker;
+        let filingsObj = JSON.parse(result);
+        ticker = filingsObj.ticker;
         
+
+        //rehydrate all the tokens and prepare to fetch the json from SEC
         const filingDetailsConfig: CacheFileOptions = {
-            fileURL: replaceTokens('https://data.sec.gov/submissions/CIK{paddedcik}.json', filingsDTO),
-            fileName: replaceTokens('CIK{cik}.json',filingsDTO),
-            subDir: replaceTokens('{ticker}', filingsDTO),
+            fileURL: replaceTokens('https://data.sec.gov/submissions/CIK{paddedcik}.json', filingsObj),
+            fileName: replaceTokens('CIK{cik}.json',filingsObj),
+            subDir: replaceTokens('{ticker}', filingsObj),
             canRefresh:true,
             refreshAfterDays:30 // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec 
         }
-        wrkrLogger.info(`[RECENT FILINGS] : filingDetailsConfig contains values:  
-            \n\tfileURL: ${filingDetailsConfig.fileURL},
-            \n\tfileName: ${filingDetailsConfig.fileName}, 
-            \n\tsubdir: ${filingDetailsConfig.subDir} 
-            \nGetting recentFiling data from SEC.`);
 
+        // log it
+        wrkrLogger.info(`[RECENT FILINGS] : filingDetailsConfig contains values:  
+            \tfileURL: ${filingDetailsConfig.fileURL},
+            \tfileName: ${filingDetailsConfig.fileName}, 
+            \tsubdir: ${filingDetailsConfig.subDir} 
+            Getting recentFiling data from SEC.`);
+
+        // get recentFilings
         const filingDetailsStr:string = await cacheSvc.getFileFromCache(filingDetailsConfig);
+
         if (!filingDetailsStr) {
-                throw new SECOperationError(`No JSON data for ${filingsDTO.ticker}. Check if data is available at ${filingDetailsConfig.fileURL} `, HTTPStatusCodes.BadRequest, SECOperationFailureCodes.Unknown);
+                throw new SECOperationError(`No JSON data for ${filingsObj.ticker}. 
+                    Check if data is available at ${filingDetailsConfig.fileURL} `, 
+                    HTTPStatusCodes.BadRequest, SECOperationFailureCodes.Unknown);
         }
-        const recentFilings = JSON.parse(filingDetailsStr).filings.recent;
-        const filings:{
-            accession: string;
-            formType: string;
-            filingDate: string;
-        }[] = [];
+
+        // START capturing the recent filings from json doc
+        const jsonDataDoc = JSON.parse(filingDetailsStr);
+        const recentFilings = jsonDataDoc.filings.recent;
+        
         recentFilings.form.forEach((formType: string, index: number) => {
-            if (formType === "10-K" || formType === "10-Q") {
-                filings.push({
-                    accession: recentFilings.accessionNumber[index].replace(/-/g, ''),
-                    formType: formType,
-                    filingDate: recentFilings.filingDate[index]
-                });
+           if (formType === '10-K' || formType === '10-Q') {
+            wrkrLogger.debug(`[LOOPING] looking for 10K and 10q in recent filings ${formType}`);
+                let temp:FilingDataConfig = {
+                    ticker:filingsObj.ticker,
+                    cik:filingsObj.cik,
+                    name:filingsObj.name,
+                    exchange:filingsObj.exchange,
+                    paddedcik:filingsObj.paddedCIK,
+                    sic: jsonDataDoc.sic,
+                    sicDescription:jsonDataDoc.sicDescription,
+                    accession:recentFilings.accessionNumber[index],
+                    formType:formType,
+                    filingDate:recentFilings.filingDate[index]
+                };
+               
+                //wrkrLogger.debug(`${filingDoc.sic} ${recentFilings.accessionNumber[index]}`);
+                wrkrLogger.debug(`adding Jobs to Redis`);
+                redisJobSvc.addJob(JobsMetadata.JobNames.fetch_summaries, JSON.stringify(temp));
             }
+           
         });
     }
     catch (error) {

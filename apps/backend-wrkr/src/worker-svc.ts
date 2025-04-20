@@ -93,14 +93,13 @@ redisSvc.getSubscriberClient().on('connect', ()=> {
         
         switch (channel) {
             case JobsMetadata.ChannelNames.lookup_cik:
-                wrkrLogger.debug(`[CALL Worker]: LookUpCIK(${message})`);
-    
-                // start the call
+                wrkrLogger.debug(`[CALL Worker]: wrkrLookupCIK(${message})`);
+                    // start the call
                 wrkrLookupCIK(redisSvc, fileSvc, wrkrLogger);
             break;
             case JobsMetadata.ChannelNames.recent_filings:
-                wrkrLogger.debug(`[CALL Worker]: Get Recent Filings(${message})`);
-    
+                wrkrLogger.debug(`[CALL Worker]:wrkrLookupRecentFilings(${message})`);
+
                 // start the call
                 wrkrLookupRecentFilings(redisJobSvc, fileSvc, wrkrLogger);
             break;

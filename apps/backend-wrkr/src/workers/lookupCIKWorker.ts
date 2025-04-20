@@ -53,6 +53,7 @@ export const wrkrLookupCIK = async (redisSvc:RedisService,cacheSvc:CacheSvc, wrk
             name:name, 
             exchange:exchange,
             paddedcik:paddedCIK
+        
         };
         //stringify the object and store in the next job queue
         const filingDataStr:string = JSON.stringify(filingDataDTO);
