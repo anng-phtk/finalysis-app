@@ -72,6 +72,10 @@ export enum HTTPStatusCodes {
     NetworkAuthenticationRequired = 511,
 }
 
+
+/**
+ * Jobs Metatdata class
+ */
 export const JobsMetadata = {
     ActiveJobs:{
         ticker:'active:ticker',
@@ -80,10 +84,14 @@ export const JobsMetadata = {
         ticker:'active:ticker',
     },
     ChannelNames:{
-        lookup_cik:'channel:lookup:cik'
+        lookup_cik:'channel:lookup:cik',
+        recent_filings:'channel:lookup:recentfilings',
+        filing_details:'channel:lookup:filingdetails'
     },
     JobNames:{
         lookup_cik:'job:lookup:cik',
-        recent_filings:'job:lookup:recent_filings'
+        recent_filings:'job:lookup:recentfilings',
+        filing_details:'job:lookup:filingdetails',
+        fetch_summaries:'job:fetch:filingsummaries'
     }
 }

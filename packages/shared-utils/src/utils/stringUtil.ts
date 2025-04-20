@@ -7,7 +7,6 @@ export function replaceTokens(tokenizedString:string, replacements:Record<string
         return word;
     });
 
-    console.log(newString);
     return newString;
 }
 

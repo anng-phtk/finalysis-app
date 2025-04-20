@@ -8,7 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "npm run build -w @finalysis-app/shared-utils",
     "build":"tsc",
-    "start": "node ./dist/worker-svc.js"
+    "start": "node ./dist/worker-svc.js",
+    "bunstart":"bun run ./src/worker-svc.ts"
   },
   "author": "Anang A. Phatak",
   "license": "UNLICENSED"

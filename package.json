@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx nodemon -w [\"apps/*/src/**/*\",\"packages/*/src/**/*\"] --ext ts --exec \"npm run build --workspaces\""
+    "build": "npx nodemon -w [\"apps/*/src/**/*\",\"packages/*/src/**/*\"] --ext ts --exec \"npm run build --workspace @finalysis-app/shared-utils\""
   },
   "keywords": [],
   "author": "Anang A. Phatak",

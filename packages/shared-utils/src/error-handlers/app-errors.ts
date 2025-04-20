@@ -96,3 +96,17 @@ export class SECOperationError extends BaseAppError {
         // ... captureStackTrace ...
     }
 }
+
+export class RedisSvcError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly statusCode:number = HTTPStatusCodes.NotFound,
+        public readonly statusText:string = SECOperationFailureCodes.Unknown,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message, statusCode);
+        this.name = 'CacheError';
+        // ... captureStackTrace ...
+    }
+}
+

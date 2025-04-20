@@ -6,6 +6,8 @@ export interface FilingDataConfig {
     cik?: string;
     paddedcik?: string;              // same as CIK, but left padded with zeros and 10 chars long. included here for convenience
     name?:string;                    // company name
+    sic?:string;
+    sicDescription?:string;
     exchange?:string;                // Which exchange trades this stock. Not sure if this is useful to us
     accession?:string;
     filingDate?:string;              // @todo: can we make a new Date() and convert this to date?

@@ -3,10 +3,13 @@ import {CacheSvc, CacheSvcConfig, createCacheSvc,
     createRedisSvc, RedisService, RedisServiceConfig,
     createRemoteFetchSvc, RemoteFileSvc, RemoteFileSvcConfig,
     FilingDataConfig,
-    JobsMetadata} from '@finalysis-app/shared-utils';
+    JobsMetadata,
+    RedisJobsSvc,
+    createRedisJobsSvc} from '@finalysis-app/shared-utils';
 
 import { configDotenv } from 'dotenv';
 import { wrkrLookupCIK } from './workers/lookupCIKWorker';
+import { wrkrLookupRecentFilings } from './workers/lookupRecentFilingsWorker';
 
 // define env
 configDotenv({path:'../../.env'});
@@ -37,7 +40,7 @@ const redisConfig:RedisServiceConfig= {
     }
 };
 const redisSvc:RedisService = createRedisSvc(redisConfig, loggingSvc); 
-
+const redisJobSvc:RedisJobsSvc = createRedisJobsSvc(redisSvc, loggingSvc);
 
 
 // initialize remoteFile fetcher, its needed for our cache file fetcher
@@ -89,13 +92,16 @@ redisSvc.getSubscriberClient().on('connect', ()=> {
         wrkrLogger.debug(`Got a message from  ${channel} :  ${message}`);
         
         switch (channel) {
-            case "channel:lookup:cik":
-                wrkrLogger.debug(`[CALL Worker]: LookUpCIK(${message})`);
-                const filingDTO:FilingDataConfig = {
-                    ticker:message
-                };
-                // start the call
+            case JobsMetadata.ChannelNames.lookup_cik:
+                wrkrLogger.debug(`[CALL Worker]: wrkrLookupCIK(${message})`);
+                    // start the call
                 wrkrLookupCIK(redisSvc, fileSvc, wrkrLogger);
+            break;
+            case JobsMetadata.ChannelNames.recent_filings:
+                wrkrLogger.debug(`[CALL Worker]:wrkrLookupRecentFilings(${message})`);
+
+                // start the call
+                wrkrLookupRecentFilings(redisJobSvc, fileSvc, wrkrLogger);
             break;
         }
     })
