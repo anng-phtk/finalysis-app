@@ -4,6 +4,8 @@ export { HTTPStatusCodes, JobsMetadata} from './app-config/ApplicationConfig.js'
 //redis utils
 export * from './redis/redis.types.js'; 
 export {createRedisSvc} from './redis/RedisServiceImpl.js';
+export {createRedisJobsSvc} from './redis/RedisJobsLookupSvcImpl.js'
+
 
 // mongodb utils
 export {MongoConnectionService, MongoClientConfiguration} from './mongo/mongo.types.js'

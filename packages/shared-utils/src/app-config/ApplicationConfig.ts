@@ -80,10 +80,13 @@ export const JobsMetadata = {
         ticker:'active:ticker',
     },
     ChannelNames:{
-        lookup_cik:'channel:lookup:cik'
+        lookup_cik:'channel:lookup:cik',
+        recent_filings:'channel:lookup:recent_filings',
+        filing_details:'channel:lookup:filingdetails'
     },
     JobNames:{
         lookup_cik:'job:lookup:cik',
-        recent_filings:'job:lookup:recent_filings'
+        recent_filings:'job:lookup:recent_filings',
+        filing_details:'job:lookup:filingdetails'
     }
 }

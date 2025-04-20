@@ -41,14 +41,27 @@ export const wrkrLookupCIK = async (redisSvc:RedisService,cacheSvc:CacheSvc, wrk
             throw new SECOperationError('CIK was not found SEC database. Get the latest  mappings from SEC and try again?', HTTPStatusCodes.NotFound, SECOperationFailureCodes.Unknown);
         }
 
-        let [cik, foundTicker, name, exchange] = dataItem
+        let [cik, name, foundTicker, exchange] = dataItem
+        if (!cik) throw new SECOperationError('CIK was not found SEC database.Check ticker and try again?', HTTPStatusCodes.NotFound, SECOperationFailureCodes.Unknown);
+        let paddedCIK = (cik.toString()).padStart(10, '0');
+
+
+        // make sure our data is according to the DTO object
         const filingDataDTO:FilingDataConfig = {
             ticker:foundTicker, 
             cik:cik,
             name:name, 
-            exchange:exchange};
+            exchange:exchange,
+            paddedcik:paddedCIK
+        };
+        //stringify the object and store in the next job queue
+        const filingDataStr:string = JSON.stringify(filingDataDTO);
+        
+        log.info(`[New JOB] adding Job: ${JobsMetadata.JobNames.recent_filings} : details ${filingDataStr}`);
+        await redisSvc.getCommandClient().rpush(JobsMetadata.JobNames.recent_filings, filingDataStr);
 
-        await redisSvc.getCommandClient().rpush(JobsMetadata.JobNames.recent_filings, JSON.stringify(filingDataDTO));
+        log.info(`[MESSAGE] channel: ${JobsMetadata.ChannelNames.recent_filings} : details ${filingDataStr}`);
+        await redisSvc.getCommandClient().publish(JobsMetadata.ChannelNames.recent_filings, filingDataStr);
 
     } catch (error) {
         if (error instanceof SECOperationError && error.statusCode === HTTPStatusCodes.NotFound) {
@@ -72,6 +85,7 @@ export const wrkrLookupCIK = async (redisSvc:RedisService,cacheSvc:CacheSvc, wrk
             log.error(`[UNRECOVERABLE] Generic error: ${error}`);
             throw error;
         }
-        
     }
+
+    
 }
