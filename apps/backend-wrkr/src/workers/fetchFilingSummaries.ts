@@ -16,7 +16,7 @@ const recentFilingsConfig: CacheFileOptions = {
     refreshAfterDays:30 // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec 
 }
 
-export const wrkrLookupRecentFilings = async (redisJobs:RedisJobsSvc, cacheSvc:CacheSvc, wrkrLogger:Log) => {
+export const wrkrFetchFilingSummaries = async (redisJobs:RedisJobsSvc, cacheSvc:CacheSvc, wrkrLogger:Log) => {
     try {
         let result:string = await redisJobs.getNextJob(JobsMetadata.JobNames.recent_filings);
         // force the datatype

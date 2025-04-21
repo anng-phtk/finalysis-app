@@ -8,8 +8,9 @@ import {CacheSvc, CacheSvcConfig, createCacheSvc,
     createRedisJobsSvc} from '@finalysis-app/shared-utils';
 
 import { configDotenv } from 'dotenv';
-import { wrkrLookupCIK } from './workers/lookupCIKWorker';
-import { wrkrLookupRecentFilings } from './workers/lookupRecentFilingsWorker';
+import { wrkrLookupCIK } from './workers/lookupCIK.js';
+import { wrkrLookupRecentFilings } from './workers/lookupRecentFilings.js';
+import { wrkrLookupFilingSummaries } from './workers/fetchFilingSummaries.js';
 
 // define env
 configDotenv({path:'../../.env'});
@@ -102,6 +103,12 @@ redisSvc.getSubscriberClient().on('connect', ()=> {
 
                 // start the call
                 wrkrLookupRecentFilings(redisJobSvc, fileSvc, wrkrLogger);
+            break;
+            case JobsMetadata.ChannelNames.fetch_summaries:
+                wrkrLogger.debug(`[CALL Worker]:fetchFilingSummaries(${message})`);
+
+                // start the call
+                wrkrFetchFilingSummaries(redisJobSvc, fileSvc, wrkrLogger);
             break;
         }
     })

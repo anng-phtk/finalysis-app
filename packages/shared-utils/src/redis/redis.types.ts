@@ -29,4 +29,5 @@ export interface RedisJobsSvc {
     getNextJob(jobName:string):Promise<string>
     addJob(jobName:string, jobData:string):Promise<void>
     clearActiveTicker(ticker:string):void
+    publishJob(channelName:string, message:string):Promise<void>
 }

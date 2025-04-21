@@ -42,7 +42,7 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
         if (!filingDetailsStr) {
                 throw new SECOperationError(`No JSON data for ${filingsObj.ticker}. 
                     Check if data is available at ${filingDetailsConfig.fileURL} `, 
-                    HTTPStatusCodes.BadRequest, SECOperationFailureCodes.Unknown);
+                    HTTPStatusCodes.BadRequest, 'BadTickerOrCIK');
         }
 
         // START capturing the recent filings from json doc
@@ -60,7 +60,7 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
                     paddedcik:filingsObj.paddedCIK,
                     sic: jsonDataDoc.sic,
                     sicDescription:jsonDataDoc.sicDescription,
-                    accession:recentFilings.accessionNumber[index],
+                    accession:String(recentFilings.accessionNumber[index]).replaceAll(/\-/g, ''),
                     formType:formType,
                     filingDate:recentFilings.filingDate[index]
                 };
@@ -69,14 +69,17 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
                 wrkrLogger.debug(`adding Jobs to Redis`);
                 redisJobSvc.addJob(JobsMetadata.JobNames.fetch_summaries, JSON.stringify(temp));
             }
-           
         });
+
+        // post an interim update for the client
+        redisJobSvc.publishJob(JobsMetadata.ChannelNames.recent_filings, `Found Accession Numbers 10K and 10Q for ${ticker}`);
     }
     catch (error) {
         if (error instanceof SECOperationError) {
             wrkrLogger.error(`[RECOVERABLE]: Check ${ticker} exists and try again`);
             // make sure to remove ticker from active tickers list
             await redisJobSvc.clearActiveTicker(ticker);
+            redisJobSvc.publishJob(JobsMetadata.ChannelNames.recent_filings, `Failed to fetch ${ticker} failed`);
         }
     }
 }

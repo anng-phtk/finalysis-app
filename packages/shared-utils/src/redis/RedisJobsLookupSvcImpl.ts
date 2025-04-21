@@ -17,6 +17,13 @@ class RedisJobsLookupSvcImpl implements RedisJobsSvc {
         this.logger = loggingSvc.getLogger('job-worker');
 
     }
+    public async publishJob(channelName:string, message:string): Promise<void> {
+        try {
+            await this.cmdClientSvc.getCommandClient().publish(channelName, message);
+        } catch (err) {
+            throw new Error("Method not implemented.");
+        }
+    }
 
     /** 
     * @override 

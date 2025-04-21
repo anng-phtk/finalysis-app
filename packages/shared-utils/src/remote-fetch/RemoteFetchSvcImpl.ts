@@ -28,9 +28,7 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
             try {
                 response = await fetch(url, {
                     headers: {
-                        "User-Agent": "Finalysis-App finalyze.admin@gmail.com",
-                        "Accept-Encoding": "gzip, deflate",
-                        "Host": "www.sec.gov"
+                        "User-Agent": "Finalysis-App finalyze.admin@gmail.com"
                     }
                 });
 
