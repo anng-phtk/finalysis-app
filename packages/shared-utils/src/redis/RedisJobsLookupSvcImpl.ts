@@ -31,7 +31,7 @@ class RedisJobsLookupSvcImpl implements RedisJobsSvc {
     * @throws {RedisSvcError} - to indicate that a job was not added
     * */
 
-    public async getNextJob(jobName: string): Promise<string> {
+    public async getNextJob(jobName: string): Promise<string|null> {
         try {
             const result: [string, string] | null = await this.cmdClientSvc.getCommandClient().blpop(jobName, 1);
             if (!result) throw new RedisSvcError('Job cannot be parsed', HTTPStatusCodes.NotFound, "unknown");
@@ -40,17 +40,16 @@ class RedisJobsLookupSvcImpl implements RedisJobsSvc {
         } catch (error) {
             // log these errors
             if (error instanceof RedisSvcError && error.statusCode === HTTPStatusCodes.NotFound) {
-                this.logger.error(`[JOB NOT FOUND] ${error.message}`);
-                throw new RedisSvcError(`Could not find a job : ${jobName}`, HTTPStatusCodes.NotFound);
+                this.logger.error(`[JOB NOT FOUND] ${error}`);
+                //throw new RedisSvcError(`Could not find a job : ${jobName}`, HTTPStatusCodes.NotFound);
+                return null;
             }
             else {
                 this.logger.error(`[UNRECOVERABLE] Unknown error: ${error}`);
                 throw new RedisSvcError(`An error occurred when trying to acces the job  ${jobName}`, HTTPStatusCodes.NotAcceptable);
             }
-
         }
     }
-
     /** 
          * @override 
          * @param {string} jobName - Name of the job in redis 

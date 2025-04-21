@@ -3,15 +3,20 @@
   "version": "1.0.0",
   "description": "Worker to pick up the ticker requests queued by api-server to start fetching, parsing and serving docs from SEC.Gov",
   "main": "./dist/worker-svc.js",
-  "devDependencies": {},
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "npm run build -w @finalysis-app/shared-utils",
-    "build":"tsc",
+    "build": "tsc",
     "start": "node ./dist/worker-svc.js",
-    "bunstart":"bun run ./src/worker-svc.ts"
+    "bunstart": "bun run ./src/worker-svc.ts"
   },
   "author": "Anang A. Phatak",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@types/xml2js": "^0.4.14"
+  }
 }

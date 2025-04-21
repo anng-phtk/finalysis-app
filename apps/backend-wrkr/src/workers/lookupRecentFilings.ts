@@ -13,7 +13,7 @@ import { JobsMetadata } from "@finalysis-app/shared-utils";
 export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:CacheSvc, wrkrLogger:Log) => {
     let ticker:string = '';
     try {
-        let result:string = await redisJobSvc.getNextJob(JobsMetadata.JobNames.fetch_summaries);
+        let result:string|null = await redisJobSvc.getNextJob(JobsMetadata.JobNames.recent_filings);
         // a no result likely means we drained the queue of all 10Ks 
         if (!result) {
             // unreachble code, but we can decide to comment it out later
@@ -29,7 +29,7 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
         const filingDetailsConfig: CacheFileOptions = {
             fileURL: replaceTokens('https://data.sec.gov/submissions/CIK{paddedcik}.json', filingsObj),
             fileName: replaceTokens('CIK{cik}.json',filingsObj),
-            subDir: replaceTokens('{ticker}', filingsObj),
+            subDir: filingsObj.ticker,
             canRefresh:true,
             refreshAfterDays:30 // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec 
         }
@@ -80,14 +80,14 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
         });
 
         // post an interim update for the client
-        redisJobSvc.publishJob(JobsMetadata.ChannelNames.recent_filings, `Found Accession Numbers 10K and 10Q for ${ticker}`);
+        redisJobSvc.publishJob(JobsMetadata.ChannelNames.fetch_summaries, `Found Accession Numbers 10K and 10Q for ${ticker}`);
     }
     catch (error) {
         if (error instanceof SECOperationError) {
             wrkrLogger.error(`[RECOVERABLE]: Check ${ticker} exists and try again`);
             // make sure to remove ticker from active tickers list
             await redisJobSvc.clearActiveTicker(ticker);
-            redisJobSvc.publishJob(JobsMetadata.ChannelNames.recent_filings, `Failed to fetch ${ticker} failed`);
+            redisJobSvc.publishJob(ticker, `Failed to fetch ${ticker} failed`);
         }
     }
 }

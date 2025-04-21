@@ -43,7 +43,7 @@ class RemoteFileSvcImpl implements RemoteFileSvc {
                         this.log.debug(`[FINISHED] Called ${url} and got ${response.ok}. Returning JSON:\n${content2String.substring(0, 100)}`);
                         return content2String; // Return parsed object
                         //return content;
-                    } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain') || contentType.includes('application/xml'))) {
+                    } else if (contentType && (contentType.includes('text/html') || contentType.includes('text/plain') || contentType.includes('text/xml') || contentType.includes('application/xml'))) {
 
                         const content = await response.text();
                         this.log.debug(`[FINISHED] Called ${url} and got ${response.ok}.  body:\n${content.substring(0, 100)}`);

@@ -26,7 +26,7 @@ export interface RedisService {
 
 export interface RedisJobsSvc {
     /** @returns {Promise<string>} - gets the redis in queue manager */
-    getNextJob(jobName:string):Promise<string>
+    getNextJob(jobName:string):Promise<string|null>
     addJob(jobName:string, jobData:string):Promise<void>
     clearActiveTicker(ticker:string):void
     publishJob(channelName:string, message:string):Promise<void>

@@ -10,7 +10,7 @@ import {CacheSvc, CacheSvcConfig, createCacheSvc,
 import { configDotenv } from 'dotenv';
 import { wrkrLookupCIK } from './workers/lookupCIK.js';
 import { wrkrLookupRecentFilings } from './workers/lookupRecentFilings.js';
-import { wrkrLookupFilingSummaries } from './workers/fetchFilingSummaries.js';
+import { wrkrFetchFilingSummaries } from './workers/fetchFilingSummaries.js';
 
 // define env
 configDotenv({path:'../../.env'});
