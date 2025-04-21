@@ -3,19 +3,24 @@ import { CacheFileOptions, CacheSvc,
     Log, LoggingService, 
     RedisJobsSvc, 
     RedisService, 
+    RedisSvcError, 
     replaceTokens, 
     SECOperationError, SECOperationFailureCodes } from "@finalysis-app/shared-utils";
 import { JobsMetadata } from "@finalysis-app/shared-utils";
 
 
 
-
 export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:CacheSvc, wrkrLogger:Log) => {
     let ticker:string = '';
     try {
-        let result:string = await redisJobSvc.getNextJob(JobsMetadata.JobNames.recent_filings);
-                
-        // force the datatype
+        let result:string = await redisJobSvc.getNextJob(JobsMetadata.JobNames.fetch_summaries);
+        // a no result likely means we drained the queue of all 10Ks 
+        if (!result) {
+            // unreachble code, but we can decide to comment it out later
+            throw new RedisSvcError('No more 10K or 10Q documents to fetch', HTTPStatusCodes.NoContent, 'NoMore10KsOr10Qs');
+        } 
+
+        // force the datatype?
         let filingsObj = JSON.parse(result);
         ticker = filingsObj.ticker;
         
@@ -28,6 +33,9 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
             canRefresh:true,
             refreshAfterDays:30 // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec 
         }
+        
+                
+        
 
         // log it
         wrkrLogger.info(`[RECENT FILINGS] : filingDetailsConfig contains values:  
