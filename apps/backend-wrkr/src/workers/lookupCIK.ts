@@ -1,4 +1,4 @@
-import { CacheFileOptions, CacheSvc, FilingDataConfig, HTTPStatusCodes, Log, LoggingService, RedisService, SECOperationError, SECOperationFailureCodes } from "@finalysis-app/shared-utils";
+import { CacheFileOptions, CacheSvc, FilingDataConfig, HTTPStatusCodes, Log, LoggingService, RedisService, RedisSvcError, SECOperationError, SECOperationFailureCodes } from "@finalysis-app/shared-utils";
 import { JobsMetadata } from "@finalysis-app/shared-utils";
 
 const lookUpCIKFileConfig = ():CacheFileOptions => {
@@ -21,7 +21,7 @@ export const wrkrLookupCIK = async (redisSvc:RedisService,cacheSvc:CacheSvc, wrk
     try {
     
         const result = await redisSvc.getCommandClient().blpop(JobsMetadata.JobNames.lookup_cik, 1);
-        if (!result) throw new SECOperationError('Job cannot be parsed', HTTPStatusCodes.NotAcceptable, SECOperationFailureCodes.Unknown);
+        if (!result) throw new RedisSvcError('No more jobs', HTTPStatusCodes.NotAcceptable, SECOperationFailureCodes.Unknown);
         
         let [queueName,job] = result;
         
@@ -65,7 +65,7 @@ export const wrkrLookupCIK = async (redisSvc:RedisService,cacheSvc:CacheSvc, wrk
         await redisSvc.getCommandClient().publish(JobsMetadata.ChannelNames.recent_filings, filingDataStr);
 
     } catch (error) {
-        if (error instanceof SECOperationError && error.statusCode === HTTPStatusCodes.NotFound) {
+        if (error instanceof RedisSvcError && error.statusCode === HTTPStatusCodes.NotFound) {
             redisSvc.getCommandClient().publish(ticker, `{
                     "message":"${error.message}",
                     "statusCode":"${error.statusCode}",
@@ -80,11 +80,16 @@ export const wrkrLookupCIK = async (redisSvc:RedisService,cacheSvc:CacheSvc, wrk
                 "statusCode":"${error.statusCode}",
                 "detail": "${error}"
             }`);
-            log.error(`${error.message}`);
+            log.error(`Logging: ${error.message}`);
         }
         else {
-            log.error(`[UNRECOVERABLE] Generic error: ${error}`);
-            throw error;
+            log.error(`[UNRECOVERABLE] Generic error.`);
+
+            // call clear ticker
+            log.error(`[UNRECOVERABLE] Removing tiker from active job list: ${ticker}`);
+            await redisSvc.getCommandClient().srem(JobsMetadata.ActiveJobs.ticker, ticker);
+            // await redisJobSv.clearActiveTicker(ticker);
+            await redisSvc.getCommandClient().publish(ticker, `{"message":"SEC could not find a CIK code for ${ticker}"}`);
         }
     }
 

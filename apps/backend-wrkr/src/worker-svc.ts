@@ -11,6 +11,7 @@ import { configDotenv } from 'dotenv';
 import { wrkrLookupCIK } from './workers/lookupCIK.js';
 import { wrkrLookupRecentFilings } from './workers/lookupRecentFilings.js';
 import { wrkrFetchFilingSummaries } from './workers/fetchFilingSummaries.js';
+import { wrkrFetchStatments } from './workers/fetchStatements.js';
 
 // define env
 configDotenv({path:'../../.env'});
@@ -109,6 +110,12 @@ redisSvc.getSubscriberClient().on('connect', ()=> {
 
                 // start the call
                 wrkrFetchFilingSummaries(redisJobSvc, fileSvc, wrkrLogger);
+            break;
+            case JobsMetadata.ChannelNames.fetch_financial_stmts:
+                wrkrLogger.debug(`[CALL Worker]:fetchFilingSummaries(${message})`);
+
+                // start the call
+                wrkrFetchStatments(redisJobSvc, fileSvc, wrkrLogger);
             break;
         }
     })

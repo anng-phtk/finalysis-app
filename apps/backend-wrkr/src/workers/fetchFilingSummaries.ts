@@ -15,8 +15,7 @@ export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc
     wrkrLogger.debug(`[START] wrkrFetchFilingSummaries: will fetch filingSummary.xml for this period's filing`);
 
     let runAgain: boolean = true;
-
-    let filingsDTO; // no datatype fits. need to find a common dt
+    let ticker:string = '';
     try {
         while (runAgain) {
 
@@ -37,7 +36,7 @@ export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc
             wrkrLogger.debug(`[PROCESS] Read the result, and start fetching filing summaries from `);
 
             // force the datatype
-            filingsDTO = JSON.parse(result);
+            const filingsDTO = JSON.parse(result);
             const filingSummaryOptions: CacheFileOptions = {
                 fileName: 'FilingSummary.xml', // we know this file name
                 fileURL: replaceTokens('https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/FilingSummary.xml', filingsDTO),
@@ -59,12 +58,18 @@ export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc
                 Check if data is available at ${filingsDTO.fileURL} `,
                     HTTPStatusCodes.BadRequest, 'BadTickerOrCIK');
             }
-
             const docs:Record<string, string[]> = await wrkrParseXMLSummries(xmlSummaries, wrkrLogger);
+
+            const filingData:FilingDataConfig = filingsDTO as FilingDataConfig; 
+            filingData.filingDocs = docs;
+            ticker = filingData.ticker;
+
+            redisJobs.addJob(JobsMetadata.JobNames.fetch_financial_stmts, JSON.stringify(filingData));
         }
 
         // if we are here, then while loop has run its course. publish a message
-        wrkrLogger.debug(`We are here. We are done!`)
+        wrkrLogger.debug(`We are here. We are done!`);
+        redisJobs.publishJob(JobsMetadata.ChannelNames.fetch_financial_stmts, `{"ticker":"${ticker}", "message":"Found Financial Statements"}`);
     }
     catch (error) {
         if (error instanceof SECOperationError) {
@@ -73,6 +78,7 @@ export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc
         else if (error instanceof RedisSvcError && error.statusCode === HTTPStatusCodes.NoContent) {
             wrkrLogger.info(`[RECOVERABE] We are fine. No new jobs to process`)
         }
+        redisJobs.publishJob(ticker, `{"message":"error in getting financial statements"}`);
     }
 }
 
@@ -120,7 +126,7 @@ const wrkrParseXMLSummries = async (xmlFile:string, wrkrLogger:Log):Promise<Reco
             wrkrLogger.warn(`Unmapped financial statements detected',data: ${unmappedStatements}`)
         }
         
-        console.log(docMap);
+        wrkrLogger.debug(`Found docments: ${JSON.stringify(docMap)}`);
         return docMap;
 
     } catch (error) {

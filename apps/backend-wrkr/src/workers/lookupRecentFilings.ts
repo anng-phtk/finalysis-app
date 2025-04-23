@@ -16,6 +16,9 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
         let result:string|null = await redisJobSvc.getNextJob(JobsMetadata.JobNames.recent_filings);
         // a no result likely means we drained the queue of all 10Ks 
         if (!result) {
+        
+            wrkrLogger.warn('[wrkrLookupRecentFilings] No more jobs');
+            
             // unreachble code, but we can decide to comment it out later
             throw new RedisSvcError('No more 10K or 10Q documents to fetch', HTTPStatusCodes.NoContent, 'NoMore10KsOr10Qs');
         } 
@@ -33,9 +36,6 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
             canRefresh:true,
             refreshAfterDays:30 // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec 
         }
-        
-                
-        
 
         // log it
         wrkrLogger.info(`[RECENT FILINGS] : filingDetailsConfig contains values:  
@@ -83,11 +83,15 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
         redisJobSvc.publishJob(JobsMetadata.ChannelNames.fetch_summaries, `Found Accession Numbers 10K and 10Q for ${ticker}`);
     }
     catch (error) {
-        if (error instanceof SECOperationError) {
-            wrkrLogger.error(`[RECOVERABLE]: Check ${ticker} exists and try again`);
+            wrkrLogger.error(`[RECOVERABLE]: Check if ${ticker} exists and try again. We could not find any SEC documents for this ticker`);
             // make sure to remove ticker from active tickers list
             await redisJobSvc.clearActiveTicker(ticker);
             redisJobSvc.publishJob(ticker, `Failed to fetch ${ticker} failed`);
-        }
+
+            // we are not throwing an error here
+            // we simply want to notify the connected client that something went wrong and we cannot fetch statements for this ticker
+            // it could be because they entered a wrong ticker 
+            
+            //throw error
     }
 }
