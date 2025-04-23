@@ -97,7 +97,7 @@ class CacheSvcImpl implements CacheSvc {
 
         // After the while loop
         this.cachelog.error(`Failed to get file ${fileOptions.fileName} from cache after ${this.config.maxCacheWriteRetry ?? 2} attempts.`);
-        throw new DiskCacheError(`Failed to get file ${fileOptions.fileName} after retries`, DiskCacheFailureCodes.Unknown);
+        throw new DiskCacheError(`Failed to get file ${fileOptions.fileName} after retries`, DiskCacheFailureCodes.NothingToFetch);
     }
 
     /**
