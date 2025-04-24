@@ -13,10 +13,5 @@ export interface FilingDataConfig {
     filingDate?:string;              // @todo: can we make a new Date() and convert this to date?
     formType?:string;                // @todo: do we want to make this restrictive to 10-K, 10-Q, 
     filingDocs?:Record<string, string[]>|null;
+    stmtType?:string; // 'equity'|'income'|'cashflow'|'balance'
 }
-
-export interface FilingDataSvc {
-    getCIK(ticker:string):string[];
-}
-
-

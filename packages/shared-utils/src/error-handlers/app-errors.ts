@@ -111,3 +111,24 @@ export class RedisSvcError extends BaseAppError {
     }
 }
 
+
+export enum StatementTypes {
+    equity = 'EQUITY_STATEMENT',
+    balance = 'BALANCE_SHEET',
+    income = 'INCOME STATEMENT',
+    cashflow = 'CASH_FLOW_STATEMENT'
+}
+
+
+export class FinancialStmtParsingError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly statusCode:number = HTTPStatusCodes.BadRequest,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message, statusCode);
+        this.name = 'CacheError';
+        // ... captureStackTrace ...
+    }
+}
+

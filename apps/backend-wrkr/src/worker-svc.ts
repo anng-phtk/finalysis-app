@@ -5,7 +5,10 @@ import {CacheSvc, CacheSvcConfig, createCacheSvc,
     FilingDataConfig,
     JobsMetadata,
     RedisJobsSvc,
-    createRedisJobsSvc} from '@finalysis-app/shared-utils';
+    createRedisJobsSvc,
+    FinancialStmtParserSvc,
+    createFinancialStmtParserSvc,
+    } from '@finalysis-app/shared-utils';
 
 import { configDotenv } from 'dotenv';
 import { wrkrLookupCIK } from './workers/lookupCIK.js';
@@ -60,7 +63,11 @@ const cacheConfig:CacheSvcConfig = {
     maxCacheWriteRetry:2,
 };
 const fileSvc:CacheSvc = createCacheSvc(cacheConfig, remotefetchSvc,loggingSvc);
+
+const stmtParserSvc:FinancialStmtParserSvc = createFinancialStmtParserSvc(loggingSvc)
+
 // --------------- done
+
 
 
 
@@ -68,7 +75,7 @@ const fileSvc:CacheSvc = createCacheSvc(cacheConfig, remotefetchSvc,loggingSvc);
 const channels:string[] = [];
 Object.values(JobsMetadata.ChannelNames).forEach(val => {
     channels.push(val)
-})
+});
 console.debug(channels);
 
 
@@ -115,7 +122,7 @@ redisSvc.getSubscriberClient().on('connect', ()=> {
                 wrkrLogger.debug(`[CALL Worker]:fetchFilingSummaries(${message})`);
 
                 // start the call
-                wrkrFetchStatments(redisJobSvc, fileSvc, wrkrLogger);
+                wrkrFetchStatments(redisJobSvc, fileSvc, stmtParserSvc, wrkrLogger);
             break;
         }
     })

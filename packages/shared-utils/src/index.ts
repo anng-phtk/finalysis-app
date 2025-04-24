@@ -29,4 +29,5 @@ export {createCacheSvc} from './disk-cache/CacheSvcImpl.js';
 // filings
 export {FilingDataConfig} from './financial-data/filings.types.js';
 // Financial Statements
-export { EquityStatement, FinancialStatement} from './statement-parser/financial-stmts.types.js';
+export { EquityStatement, FinancialStatement, FinancialStmtParserSvc} from './statement-parser/financial-stmts.types.js';
+export { createFinancialStmtParserSvc } from './statement-parser/FinancialStmtParserSvcImpl.js';

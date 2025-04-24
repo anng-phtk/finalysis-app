@@ -9,10 +9,15 @@ import {
     JobsMetadata,
     RedisSvcError,
     DiskCacheError,
-    DiskCacheFailureCodes
+    DiskCacheFailureCodes,
+    FinancialStmtParserSvc,
+    StatementTypes,
+    EquityStatement,
+    FinancialStatement
 } from "@finalysis-app/shared-utils";
 
-export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: CacheSvc, wrkrLogger: Log) => {
+
+export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: CacheSvc, stmtParserSvc:FinancialStmtParserSvc, wrkrLogger: Log) => {
     let ticker:string;
     let runAgain:boolean = true;
     try {
@@ -29,7 +34,7 @@ export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: Cach
             let filingsDTO = JSON.parse(result);
             
             for (let [stmt, stmtFiles] of Object.entries(filingsDTO.filingDocs)) {
-                console.log(stmt, ":", stmtFiles);
+                wrkrLogger.debug(stmt, ":", stmtFiles);
 
                 for (let fileName of (stmtFiles as string[])) {
                     const statementDataOptions:CacheFileOptions = {
@@ -38,11 +43,21 @@ export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: Cach
                         subDir: replaceTokens(`{ticker}/{accession}/`, filingsDTO),
                         canRefresh: false
                     };
-                    // downloads the HTMs from SEC
-                    console.log(JSON.stringify(statementDataOptions));
-                    const htmlDoc:string = await cacheSvc.getFileFromCache(statementDataOptions);
 
+                    // downloads the HTMs from SEC
+                    wrkrLogger.debug(JSON.stringify(statementDataOptions));
+                    const htmlDoc:string = await cacheSvc.getFileFromCache(statementDataOptions);
                     
+                    let filing:FilingDataConfig = filingsDTO as FilingDataConfig;
+                    
+                    if (stmt === 'equity') {
+                        (filing as EquityStatement).filingData = stmtParserSvc.parseEquityStatement(htmlDoc);
+                    }
+                    else {
+                        (filing as FinancialStatement).filingData = stmtParserSvc.parseStatement(htmlDoc);
+                    }
+                              
+                    wrkrLogger.info(`[STMT DATA]:\n\t${JSON.stringify(filing)}`)
                 }
             }
             console.log('we are done!')
@@ -63,9 +78,3 @@ export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: Cach
         
     }
 }
-
-const transformStmtAndSave = (statement:string) => {
-    
-};
-
-
