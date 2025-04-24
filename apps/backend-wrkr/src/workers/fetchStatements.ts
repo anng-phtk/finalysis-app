@@ -11,7 +11,6 @@ import {
     DiskCacheError,
     DiskCacheFailureCodes
 } from "@finalysis-app/shared-utils";
-import { workerData } from "worker_threads";
 
 export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: CacheSvc, wrkrLogger: Log) => {
     let ticker:string;
@@ -23,9 +22,6 @@ export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: Cach
                 // we are done, there are no further results to eval
                 runAgain = false;
                 continue;
-
-                // this line will not exeute, but I will keep it here for now
-                throw new RedisSvcError('No more jobs to process', HTTPStatusCodes.NoContent, "NoMoreRedisJobs");
             }
             // still inside while...
             wrkrLogger.debug(`[PROCESS] Read the html statements, and start downloading `);
@@ -44,16 +40,14 @@ export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: Cach
                     };
                     // downloads the HTMs from SEC
                     console.log(JSON.stringify(statementDataOptions));
-                    const htmlDoc = await cacheSvc.getFileFromCache(statementDataOptions);
+                    const htmlDoc:string = await cacheSvc.getFileFromCache(statementDataOptions);
+
+                    
                 }
             }
             console.log('we are done!')
-            /*
-            Object.values(filingsDTO.filingDocs).map((docName, index:number) => {
-                console.log(docName, index);
-            });
-            */
-        }
+            
+        } //end while loop
     } catch (error) {
         if (error instanceof RedisSvcError && error.statusCode === HTTPStatusCodes.NotFound) {
             if (runAgain) {
@@ -70,6 +64,8 @@ export const wrkrFetchStatments = async (redisJobs: RedisJobsSvc, cacheSvc: Cach
     }
 }
 
-const parseStmtHTML = (statement:string) => {
+const transformStmtAndSave = (statement:string) => {
     
 };
+
+

@@ -19,29 +19,4 @@ export interface FilingDataSvc {
     getCIK(ticker:string):string[];
 }
 
-export const CIKLookupFile = (loggingSvc:LoggingService):CacheFileOptions => {
 
-    return {
-        subDir: './', 
-        fileName:'company_tickers_exchange.json',
-        fileURL: 'https://www.sec.gov/files/company_tickers_exchange.json',
-        canRefresh:true,
-        refreshAfterDays:120 // dateModified + refreshAfter in days. If the resulting time is past that, then we will get new file from sec 
-    } as CacheFileOptions;
-};
-
-const RecentFilingConfig = (ConfigloggingSvc:LoggingService):any => {
-    
-};
-
-
-const FilingSummaryConfig = {
-    url: 'https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/FilingSummary.xml',
-    fileName: '{cik}_{accession}_FilingSummary.xml',
-    dir: '{ticker}'
-};
-const FiledDocumentsConfig = {
-    url: 'https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{doc}', // .htm is incld
-    fileName: '{cik}_{accession}_{doc}',
-    dir: '/disk_cache/{ticker}/'
-};

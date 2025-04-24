@@ -17,8 +17,7 @@ export interface RedisService {
     getSubscriberClient():Redis;
 
     /**
-     * @returns {Promise<void>} - disconnection returns a promise to close connection
-     */
+     * @returns {Promise<void>} - disconnection returns a promise to close connection */
     disconnect():Promise<void>;
 }
 

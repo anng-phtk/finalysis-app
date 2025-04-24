@@ -68,7 +68,7 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
                     paddedcik:filingsObj.paddedCIK,
                     sic: jsonDataDoc.sic,
                     sicDescription:jsonDataDoc.sicDescription,
-                    accession:String(recentFilings.accessionNumber[index]).replaceAll(/\-/g, ''),
+                    accession:String(recentFilings.accessionNumber[index]).replace(/\-/g, ''),
                     formType:formType,
                     filingDate:recentFilings.filingDate[index]
                 };
