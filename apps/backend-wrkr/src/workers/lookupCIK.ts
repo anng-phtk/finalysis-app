@@ -1,5 +1,7 @@
-import { CacheFileOptions, CacheSvc, FilingDataConfig, HTTPStatusCodes, Log, LoggingService, RedisService, RedisSvcError, SECOperationError, SECOperationFailureCodes } from "@finalysis-app/shared-utils";
+import { CacheFileOptions, CacheSvc, FilingDataConfig, HTTPStatusCodes, Log, 
+    RedisJobsSvc, RedisSvcError, SECOperationError } from "@finalysis-app/shared-utils";
 import { JobsMetadata } from "@finalysis-app/shared-utils";
+import { SECOperationFailureCodes } from "@finalysis-app/shared-utils/dist/app-config/ApplicationConfig.js";
 
 const lookUpCIKFileConfig = ():CacheFileOptions => {
     return {
@@ -12,33 +14,45 @@ const lookUpCIKFileConfig = ():CacheFileOptions => {
 }
 
 
-
-export const wrkrLookupCIK = async (redisSvc:RedisService,cacheSvc:CacheSvc, wrkrLogger:Log) => {
-    const log:Log = wrkrLogger;
+export const wrkrLookupCIK = async (redisJobs: RedisJobsSvc, cacheSvc: CacheSvc, wrkrLogger:Log):Promise<boolean> => {
     let ticker:string = '';
 
     wrkrLogger.debug(`[START] CIK Lookup for 1st item in the queue`)
     try {
     
-        const result = await redisSvc.getCommandClient().blpop(JobsMetadata.JobNames.lookup_cik, 1);
-        if (!result) throw new RedisSvcError('No more jobs', HTTPStatusCodes.NotAcceptable, SECOperationFailureCodes.Unknown);
-        
-        let [queueName,job] = result;
-        
-        ticker = JSON.parse(job).ticker;
+        const result:string|null = await redisJobs.getNextJob(JobsMetadata.JobNames.lookup_cik);
 
+        if (!result) throw new RedisSvcError('No more jobs', HTTPStatusCodes.NoContent, "No jobs to process");
+        
+        ticker = JSON.parse(result).ticker;
+        
         const lookupFile = await cacheSvc.getFileFromCache(lookUpCIKFileConfig());
+        
+
         const CIKData = JSON.parse(lookupFile);
         const tickerIndex: number = CIKData.fields.indexOf('ticker');
 
         if (tickerIndex === -1) throw new SECOperationError('Ticker column is not defined in SEC database. ', HTTPStatusCodes.NotFound, SECOperationFailureCodes.Unknown);
+        
 
-        const dataItem = CIKData.data.find((val: string[]) => val[tickerIndex] === ticker.toUpperCase());
-        log.debug(`[LOOKUP CIK] ${dataItem.toString()} found`);
+        //const dataItem = CIKData.data.find((val: string[]) => val[tickerIndex] === ticker);
+        
+        let dataItem:string[] = [];
+
+        for (let foundTicker of CIKData.data) {
+            if (foundTicker[tickerIndex] === ticker) {
+                dataItem = foundTicker;
+                break;
+            }
+        }
+
+        //wrkrLogger.debug(`[LOOKUP CIK] ${dataItem} found`);
+
+        console.log(dataItem);
 
         if (!dataItem) {
-            log.error(`[THROWING ERROR] No CIK found for your ticker`);
-            throw new SECOperationError('CIK was not found SEC database. Get the latest  mappings from SEC and try again?', HTTPStatusCodes.NotFound, SECOperationFailureCodes.Unknown);
+            wrkrLogger.error(`[THROWING ERROR] No CIK found for your ticker`);
+            throw new SECOperationError('CIK was not found SEC database. Get the latest  mappings from SEC and try again?', HTTPStatusCodes.NoContent, SECOperationFailureCodes.TickerNotFound);
         }
 
         let [cik, name, foundTicker, exchange] = dataItem
@@ -58,39 +72,56 @@ export const wrkrLookupCIK = async (redisSvc:RedisService,cacheSvc:CacheSvc, wrk
         //stringify the object and store in the next job queue
         const filingDataStr:string = JSON.stringify(filingDataDTO);
         
-        log.info(`[New JOB] adding Job: ${JobsMetadata.JobNames.recent_filings} : details ${filingDataStr}`);
-        await redisSvc.getCommandClient().rpush(JobsMetadata.JobNames.recent_filings, filingDataStr);
+        wrkrLogger.info(`[New JOB] adding Job: ${JobsMetadata.JobNames.recent_filings} : details ${filingDataStr}`);
+        await  redisJobs.addJob(JobsMetadata.JobNames.recent_filings, filingDataStr);
 
-        log.info(`[MESSAGE] channel: ${JobsMetadata.ChannelNames.recent_filings} : details ${filingDataStr}`);
-        await redisSvc.getCommandClient().publish(JobsMetadata.ChannelNames.recent_filings, filingDataStr);
+        wrkrLogger.info(`[MESSAGE] channel: ${JobsMetadata.ChannelNames.recent_filings} : details ${filingDataStr}`);
+        await redisJobs.publishJob(ticker, `{
+            "messageType":"CIK Lookup",
+            "statusCode": ${HTTPStatusCodes.Found},
+            "message":"Found ${filingDataDTO.cik} for ${ticker}"
+            }`);
 
+        return true;
     } catch (error) {
         if (error instanceof RedisSvcError && error.statusCode === HTTPStatusCodes.NotFound) {
-            redisSvc.getCommandClient().publish(ticker, `{
-                    "message":"${error.message}",
+            await redisJobs.publishJob(ticker, `{
+                    "messageType":"CIK Lookup",
+                    "message":"Internal server error prevented worker from processing this job",
                     "statusCode":"${error.statusCode}",
-                    "detail": "${error}"
+                    "data": "${error.message}"
                 }`);
 
-                log.error(`${error.message}`);
+                wrkrLogger.error(`${error.message}`);
         }
         else if (error instanceof SECOperationError && error.statusCode === HTTPStatusCodes.NotAcceptable) {
-            redisSvc.getCommandClient().publish(ticker, `{
+            redisJobs.publishJob(ticker, `{
+                "message":"${error.message}",
+                "statusCode":"${error.statusCode}",
+                "messageType": "CIK Lookup"
+            }`);
+            wrkrLogger.error(`Logging: ${error.message}`);
+        }
+        else if (error instanceof RedisSvcError && error.statusCode === HTTPStatusCodes.NoContent) {
+            redisJobs.publishJob(ticker, `{
                 "message":"${error.message}",
                 "statusCode":"${error.statusCode}",
                 "detail": "${error}"
             }`);
-            log.error(`Logging: ${error.message}`);
+            wrkrLogger.error(`Logging: ${error.message}`);
         }
         else {
-            log.error(`[UNRECOVERABLE] Generic error.`);
-
-            // call clear ticker
-            log.error(`[UNRECOVERABLE] Removing tiker from active job list: ${ticker}`);
-            await redisSvc.getCommandClient().srem(JobsMetadata.ActiveJobs.ticker, ticker);
-            // await redisJobSv.clearActiveTicker(ticker);
-            await redisSvc.getCommandClient().publish(ticker, `{"message":"SEC could not find a CIK code for ${ticker}"}`);
+            wrkrLogger.error(`[UNRECOVERABLE] Generic error.`);
+            await redisJobs.publishJob(ticker, `{
+                    "messageType":"CIK Lookup",
+                    "message":"SEC could not find a CIK code for ${ticker}",
+                    "statusCode":"${HTTPStatusCodes.NotFound}",
+                    "data": "${error}"
+                }`);
+            throw error;
         }
+
+        return false;
     }
 
     

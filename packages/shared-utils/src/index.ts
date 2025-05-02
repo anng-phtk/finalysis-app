@@ -1,5 +1,5 @@
 //application configurations
-export { HTTPStatusCodes, JobsMetadata} from './app-config/ApplicationConfig.js';
+export * from './app-config/ApplicationConfig.js';
 
 //redis utils
 export * from './redis/redis.types.js'; 
@@ -9,7 +9,7 @@ export {createRedisJobsSvc} from './redis/RedisJobsLookupSvcImpl.js'
 
 // mongodb utils
 export {MongoConnectionService, MongoClientConfiguration} from './mongo/mongo.types.js'
-export {} from './'
+export {createMongoConnection} from './mongo/MongoConnectionImpl.js'
 // custom errors
 export * from './error-handlers/app-errors.js';
 
@@ -31,3 +31,6 @@ export {FilingDataConfig} from './financial-data/filings.types.js';
 // Financial Statements
 export { EquityStatement, FinancialStatement, FinancialStmtParserSvc} from './statement-parser/financial-stmts.types.js';
 export { createFinancialStmtParserSvc } from './statement-parser/FinancialStmtParserSvcImpl.js';
+
+export {StatementDao, StatementDoc} from './db-svc/statement.types.js';
+export {createStatementDao} from './db-svc/StatementDAOImpl.js'; 

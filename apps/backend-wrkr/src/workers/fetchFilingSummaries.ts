@@ -11,25 +11,20 @@ import {
 } from "@finalysis-app/shared-utils";
 import { parseStringPromise } from "xml2js";
 
-export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc: CacheSvc, wrkrLogger: Log) => {
+export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc: CacheSvc, wrkrLogger: Log):Promise<boolean> => {
     wrkrLogger.debug(`[START] wrkrFetchFilingSummaries: will fetch filingSummary.xml for this period's filing`);
 
-    let runAgain: boolean = true;
+    
     let ticker:string = '';
     try {
-        while (runAgain) {
+       
 
             let result: string | null = await redisJobs.getNextJob(JobsMetadata.JobNames.fetch_summaries);
             wrkrLogger.debug(`Get job data from redis`);
 
             if (!result) {
                 wrkrLogger.debug('[NO RESULT] we are likely done');
-                runAgain = false;
-                wrkrLogger.debug(`${runAgain} set. `);
-                continue;
-                // this line will not exeute, but I will keep it here for now
                 throw new RedisSvcError('No more jobs to process', HTTPStatusCodes.NoContent, "NoMoreRedisJobs");
-
             }
 
             // inside while...
@@ -65,20 +60,47 @@ export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc
             ticker = filingData.ticker;
 
             redisJobs.addJob(JobsMetadata.JobNames.fetch_financial_stmts, JSON.stringify(filingData));
-        }
+       
 
-        // if we are here, then while loop has run its course. publish a message
-        wrkrLogger.debug(`We are here. We are done!`);
-        redisJobs.publishJob(JobsMetadata.ChannelNames.fetch_financial_stmts, `{"ticker":"${ticker}", "message":"Found Financial Statements"}`);
+        // if we are here , we have completed the job
+        wrkrLogger.debug(`Completed parsing XML summaries and found financial statements`);
+        await redisJobs.publishJob(ticker, 
+            `{"messageType":"Fetch Filing Summaries",
+            "status":"success",
+            "message":"Completed looking up filingSummaries for ${ticker} and found financial statements"}`);
+
+        return true;
     }
     catch (error) {
         if (error instanceof SECOperationError) {
-            wrkrLogger.error(`[RECOVERABLE]`)
+            wrkrLogger.error(`[RECOVERABLE] review the issue as to why this error occurred for ${ticker}`);
+            // returning false but not removing from active tickers
+            await redisJobs.publishJob(ticker, 
+                `{"messageType":"Fetch Filing Summaries",
+                "status":"${error.statusCode}",
+                "message":"Unknown error ${ticker} when trying to get financial statements"}`);
+            
         }
         else if (error instanceof RedisSvcError && error.statusCode === HTTPStatusCodes.NoContent) {
-            wrkrLogger.info(`[RECOVERABE] We are fine. No new jobs to process`)
+            wrkrLogger.info(`[RECOVERABE] We are fine. No new jobs to process`);
+            // if we don't have any jobs to process, 
+            // we don't need to keep this ticker in active ticker's list
+            await redisJobs.clearActiveTicker(ticker);
+            // the worker did not do any work, and therfore return false
+            await redisJobs.publishJob(ticker, 
+                `{"messageType":"FetchFilingSummaries",
+                "status":"${error.statusCode}",
+                "message":"There are no more summaries to download for ${ticker}"}`);
+            
         }
+        else {
+            
+            // no idea what this error could be
+            throw error;
+        }
+
         redisJobs.publishJob(ticker, `{"message":"error in getting financial statements"}`);
+        return false;
     }
 }
 

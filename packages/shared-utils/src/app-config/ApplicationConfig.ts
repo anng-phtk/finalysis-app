@@ -96,3 +96,29 @@ export const JobsMetadata = {
         fetch_financial_stmts:'job:fetch:statements'
     }
 }
+
+export enum StatementTypes {
+    equity = 'EQUITY_STATEMENT',
+    balance = 'BALANCE_SHEET',
+    income = 'INCOME STATEMENT',
+    cashflow = 'CASH_FLOW_STATEMENT'
+}
+
+
+export enum SECOperationFailureCodes {
+    Unknown = 'UNKNOWN_EXCEPTION',
+    TickerNotFound='TICKER_NOT_FOUND',
+    ActiveJobInProgress='ACTIVE_JOB'
+}
+
+
+export enum DiskCacheFailureCodes {
+    Unknown = 'UNKNOWN',
+    FileSystemRead = 'FS_READ',
+    FileSystemWrite = 'FS_WRITE',
+    FileSystemMkdir = 'FS_MKDIR',
+    FetchFailed = 'REMOTE_FETCH', // If wrapping fetch errors
+    InvalidState = 'INVALID_STATE',
+    RefreshFailed = 'REFRESH_FAILED',
+    NothingToFetch = 'NOTHING_TO_FETCH'
+}

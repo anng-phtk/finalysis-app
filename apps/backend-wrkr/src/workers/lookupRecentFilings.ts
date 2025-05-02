@@ -5,12 +5,12 @@ import { CacheFileOptions, CacheSvc,
     RedisService, 
     RedisSvcError, 
     replaceTokens, 
-    SECOperationError, SECOperationFailureCodes } from "@finalysis-app/shared-utils";
+    SECOperationError } from "@finalysis-app/shared-utils";
 import { JobsMetadata } from "@finalysis-app/shared-utils";
 
 
 
-export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:CacheSvc, wrkrLogger:Log) => {
+export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:CacheSvc, wrkrLogger:Log):Promise<boolean> => {
     let ticker:string = '';
     try {
         let result:string|null = await redisJobSvc.getNextJob(JobsMetadata.JobNames.recent_filings);
@@ -80,18 +80,35 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
         });
 
         // post an interim update for the client
-        redisJobSvc.publishJob(JobsMetadata.ChannelNames.fetch_summaries, `Found Accession Numbers 10K and 10Q for ${ticker}`);
+        await redisJobSvc.publishJob(ticker, `{
+            "messageType":"Lookup Recent Filings",
+            "status":"success",
+            "message":"Found Accession Numbers 10K and 10Q for ${ticker}"}`);
+        return true;
     }
     catch (error) {
-            wrkrLogger.error(`[RECOVERABLE]: Check if ${ticker} exists and try again. We could not find any SEC documents for this ticker`);
-            // make sure to remove ticker from active tickers list
-            await redisJobSvc.clearActiveTicker(ticker);
-            redisJobSvc.publishJob(ticker, `Failed to fetch ${ticker} failed`);
+            if (error instanceof RedisSvcError && error.statusCode === HTTPStatusCodes.NoContent) {
+                // we are ok here. probably no more jobs left to process.
+                wrkrLogger.error(`[RECOVERABLE]: Check if ${ticker} exists and try again. We could not find any SEC documents for this ticker`);
+                await redisJobSvc.publishJob(ticker, `{
+                    "messageType":"Lookup Recent Filings",
+                    "status":"${error.statusCode}",
+                    "message":"No more recent filings for  ${ticker}
+                    }`);
+            }
+            else {
+                await redisJobSvc.clearActiveTicker(ticker);
+                wrkrLogger.error(`[UNRECOVERABLE]: Remove ${ticker} from active tickers list`);
+               
+                await redisJobSvc.publishJob(ticker, `{
+                    "messageType":"Lookup Recent Filings",
+                    "status":"${HTTPStatusCodes.InternalServerError}",
+                    "message":"Failed to get recent filings for ${ticker}
+                    }`);
 
-            // we are not throwing an error here
-            // we simply want to notify the connected client that something went wrong and we cannot fetch statements for this ticker
-            // it could be because they entered a wrong ticker 
-            
-            //throw error
+                throw error;
+            }
+
+            return false;
     }
 }

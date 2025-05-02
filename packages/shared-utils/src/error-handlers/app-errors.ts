@@ -1,4 +1,4 @@
-import { HTTPStatusCodes } from "../app-config/ApplicationConfig.js";
+import { DiskCacheFailureCodes, HTTPStatusCodes, SECOperationFailureCodes } from "../app-config/ApplicationConfig.js";
 
 export class BaseAppError extends Error {
     public readonly statusCode: number = 500;
@@ -56,16 +56,7 @@ export class RemoteFetchError extends BaseAppError {
         this.name = this.constructor.name;
     }
 }
-export enum DiskCacheFailureCodes {
-    Unknown = 'UNKNOWN',
-    FileSystemRead = 'FS_READ',
-    FileSystemWrite = 'FS_WRITE',
-    FileSystemMkdir = 'FS_MKDIR',
-    FetchFailed = 'REMOTE_FETCH', // If wrapping fetch errors
-    InvalidState = 'INVALID_STATE',
-    RefreshFailed = 'REFRESH_FAILED',
-    NothingToFetch = 'NOTHING_TO_FETCH'
-}
+
 
 export class DiskCacheError extends BaseAppError {
     constructor(
@@ -77,12 +68,6 @@ export class DiskCacheError extends BaseAppError {
         this.name = 'CacheError';
         // ... captureStackTrace ...
     }
-}
-
-export enum SECOperationFailureCodes {
-    Unknown = 'UNKNOWN_EXCEPTION',
-    TickerNotFound='TICKER_NOT_FOUND',
-    ActiveJobInProgress='ACTIVE_JOB'
 }
 
 export class SECOperationError extends BaseAppError {
@@ -112,12 +97,6 @@ export class RedisSvcError extends BaseAppError {
 }
 
 
-export enum StatementTypes {
-    equity = 'EQUITY_STATEMENT',
-    balance = 'BALANCE_SHEET',
-    income = 'INCOME STATEMENT',
-    cashflow = 'CASH_FLOW_STATEMENT'
-}
 
 
 export class FinancialStmtParsingError extends BaseAppError {
@@ -127,8 +106,20 @@ export class FinancialStmtParsingError extends BaseAppError {
         public readonly innerError?: Error // Optional wrapped error
     ) {
         super(message, statusCode);
-        this.name = 'CacheError';
+        this.name = 'FinancialStatementParsingError';
         // ... captureStackTrace ...
     }
 }
 
+
+
+export class DatabaseError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message);
+        this.name = 'DatabaseError';
+        // ... captureStackTrace ...
+    }
+}

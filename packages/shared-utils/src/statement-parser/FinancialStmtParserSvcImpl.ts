@@ -1,8 +1,7 @@
 import { JSDOM } from 'jsdom';
 import { Log, LoggingService } from "../logging/logging.types.js";
-import { EquityStatement, FinancialStatement, FinancialStmtParserSvc } from './financial-stmts.types.js';
-import { FilingDataConfig } from '../financial-data/filings.types.js';
-import { FinancialStmtParsingError, StatementTypes } from '../error-handlers/app-errors.js';
+import { FinancialStmtParserSvc } from './financial-stmts.types.js';
+import { FinancialStmtParsingError } from '../error-handlers/app-errors.js';
 import { HTTPStatusCodes } from '../app-config/ApplicationConfig.js';
 
 

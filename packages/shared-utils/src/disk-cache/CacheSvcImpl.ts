@@ -5,7 +5,8 @@ import { homedir } from "os";
 import { Log, LoggingService } from "../logging/logging.types.js";
 import { RemoteFileSvc } from "../remote-fetch/remotefetch.types.js";
 import { CacheFileOptions, CacheSvc, CacheSvcConfig } from "./cachesvc.types.js";
-import { DiskCacheError, DiskCacheFailureCodes } from "../error-handlers/app-errors.js";
+import { DiskCacheError } from "../error-handlers/app-errors.js";
+import { DiskCacheFailureCodes } from "../app-config/ApplicationConfig.js";
 
 
 class CacheSvcImpl implements CacheSvc {

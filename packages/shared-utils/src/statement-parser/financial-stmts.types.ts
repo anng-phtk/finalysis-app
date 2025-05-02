@@ -1,4 +1,4 @@
-import { StatementTypes } from "../error-handlers/app-errors.js";
+
 import { FilingDataConfig } from "../financial-data/filings.types.js";
   
 export interface FinancialStatement extends FilingDataConfig{
