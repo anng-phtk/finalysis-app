@@ -72,7 +72,12 @@ export enum HTTPStatusCodes {
     NetworkAuthenticationRequired = 511,
 }
 
-
+export interface MessageConfig {
+    msgType?:string|'generic', 
+    statusCode:number, // best if used http enums
+    messageTxt:string,
+    data?:any
+}
 /**
  * Jobs Metatdata class
  */
@@ -98,10 +103,10 @@ export const JobsMetadata = {
 }
 
 export enum StatementTypes {
-    equity = 'EQUITY_STATEMENT',
-    balance = 'BALANCE_SHEET',
-    income = 'INCOME STATEMENT',
-    cashflow = 'CASH_FLOW_STATEMENT'
+    equity = 'equity',
+    balance = 'balance',
+    income = 'income',
+    cashflow = 'cashflow'
 }
 
 

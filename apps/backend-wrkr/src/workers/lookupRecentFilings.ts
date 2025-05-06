@@ -18,9 +18,9 @@ export const wrkrLookupRecentFilings = async (redisJobSvc:RedisJobsSvc,cacheSvc:
         if (!result) {
         
             wrkrLogger.warn('[wrkrLookupRecentFilings] No more jobs');
-            
+            return false;
             // unreachble code, but we can decide to comment it out later
-            throw new RedisSvcError('No more 10K or 10Q documents to fetch', HTTPStatusCodes.NoContent, 'NoMore10KsOr10Qs');
+            //throw new RedisSvcError('No more 10K or 10Q documents to fetch', HTTPStatusCodes.NoContent, 'NoMore10KsOr10Qs');
         } 
 
         // force the datatype?

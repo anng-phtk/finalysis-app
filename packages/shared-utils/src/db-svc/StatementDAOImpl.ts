@@ -111,9 +111,10 @@ export class StatementDaoImpl implements StatementDao {
     /**
      * Implements findStatementsByTicker from IStatementDao.
      */
-    async findStatementsByTicker(
+    public async findStatementsByTicker(
         ticker: string,
         statementType?: string,
+        formType?:string,
         limit: number = 20, // Default limit
         sortOrder: 1 | -1 = -1 // Default sort descending (most recent first)
     ): Promise<StatementDoc[]> {
@@ -121,9 +122,14 @@ export class StatementDaoImpl implements StatementDao {
         if (statementType) {
             filter.statementType = statementType;
         }
+
+        if (formType) {
+            filter.formType = formType; // either 10-K or 10-Q
+        }
         const sort: Sort = { filingDate: sortOrder };
 
         this.log.debug(`Finding statements by ticker`, { filter, limit, sort });
+        
         try {
             const documents = await this.collection.find(filter)
                 .sort(sort)

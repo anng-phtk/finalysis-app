@@ -29,11 +29,12 @@ export const wrkrFetchStatments = async (
     try {   
             const result:string|null = await redisJobs.getNextJob(JobsMetadata.JobNames.fetch_financial_stmts);
             if (!result) {
+                wrkrLogger.warn('[wrkrFetchStatments] No more jobs');
                 // we are done, there are no further results to eval
                 return false;
             }
-            // still inside while...
-            wrkrLogger.debug(`[PROCESS] Read the html statements, and start downloading `);
+            // do not log until actual work starts
+            wrkrLogger.debug(`[START] wrkrFetchStatments: Find the html statements, and start downloading `);
 
             // force the datatype
             let filingsDTO;
@@ -78,24 +79,28 @@ export const wrkrFetchStatments = async (
                     wrkrLogger.debug(JSON.stringify(statementDataOptions));
 
                     const htmlDoc:string = await cacheSvc.getFileFromCache(statementDataOptions);
+                   
                     // handle bad doc contents
                     if (typeof htmlDoc !== 'string') {
                         throw new SECOperationError(`Failed to retrieve valid HTML content for ${fileName}`,HTTPStatusCodes.ExpectationFailed, "Content was not in HTML/String format");
                     }
 
                     let filing:FilingDataConfig = filingsDTO as FilingDataConfig;
+                    let parsedData:any;
+                    
                     //parse html and transform to JSON
                     if (stmt === 'equity') {
-                        (filing as EquityStatement).filingData = stmtParserSvc.parseEquityStatement(htmlDoc);
-                        
+                        parsedData = (filing as EquityStatement).filingData = stmtParserSvc.parseEquityStatement(htmlDoc);
+                        (filing as EquityStatement).stmtType = stmt;
                     }
                     else {
-                        (filing as FinancialStatement).filingData = stmtParserSvc.parseStatement(htmlDoc);
+                        parsedData = (filing as FinancialStatement).filingData = stmtParserSvc.parseStatement(htmlDoc);
+                        (filing as FinancialStatement).stmtType = stmt;
                     }
 
-                    (filing as EquityStatement).stmtType = stmt;
+                
                               
-                    //wrkrLogger.info(`[STMT DATA]:\n\t${JSON.stringify(filing)}`); // don't long entire statmenets here
+                    wrkrLogger.info(`[STMT DATA]:\n\t${JSON.stringify(filing)}`); // don't long entire statmenets here
                     wrkrLogger.info(`[STMT DATA]: successfully parsed ${stmt} data`);
 
                     if (!filing.filingDate || !filing.stmtType) throw new Error('Incomplete Filings');
@@ -114,7 +119,7 @@ export const wrkrFetchStatments = async (
                         companyName: filing.name,
                         statementType: filing.stmtType, // Store the determined type
                         sourceFile: fileName, // Store the origin file
-                        parsedData: filing.filingDocs, // Store the parsed data array
+                        parsedData: parsedData, // Store the parsed data array
                         processedAt: new Date() // Timestamp the processing
                     };
 

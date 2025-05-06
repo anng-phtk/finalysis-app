@@ -17,13 +17,19 @@ const lookUpCIKFileConfig = ():CacheFileOptions => {
 export const wrkrLookupCIK = async (redisJobs: RedisJobsSvc, cacheSvc: CacheSvc, wrkrLogger:Log):Promise<boolean> => {
     let ticker:string = '';
 
-    wrkrLogger.debug(`[START] CIK Lookup for 1st item in the queue`)
+   
     try {
     
         const result:string|null = await redisJobs.getNextJob(JobsMetadata.JobNames.lookup_cik);
 
-        if (!result) throw new RedisSvcError('No more jobs', HTTPStatusCodes.NoContent, "No jobs to process");
-        
+        if (!result) {
+            wrkrLogger.warn('[wrkrLookupCIK] No more jobs');
+            return false;
+            // unreachable - we can infer no work to do
+            // throw new RedisSvcError('No more jobs', HTTPStatusCodes.NoContent, "No jobs to process");
+        }
+
+        wrkrLogger.debug(`[START] wrkrLookupCIK: CIK Lookup for 1st item in the queue`)
         ticker = JSON.parse(result).ticker;
         
         const lookupFile = await cacheSvc.getFileFromCache(lookUpCIKFileConfig());

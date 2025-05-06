@@ -12,21 +12,20 @@ import {
 import { parseStringPromise } from "xml2js";
 
 export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc: CacheSvc, wrkrLogger: Log):Promise<boolean> => {
-    wrkrLogger.debug(`[START] wrkrFetchFilingSummaries: will fetch filingSummary.xml for this period's filing`);
-
-    
     let ticker:string = '';
     try {
-       
-
             let result: string | null = await redisJobs.getNextJob(JobsMetadata.JobNames.fetch_summaries);
-            wrkrLogger.debug(`Get job data from redis`);
-
             if (!result) {
-                wrkrLogger.debug('[NO RESULT] we are likely done');
-                throw new RedisSvcError('No more jobs to process', HTTPStatusCodes.NoContent, "NoMoreRedisJobs");
+                //wrkrLogger.debug('[NO RESULT] we are likely done');
+                wrkrLogger.warn('[wrkrFetchFilingSummaries] No more jobs');
+                return false;
+                // unreachable
+                //throw new RedisSvcError('No more jobs to process', HTTPStatusCodes.NoContent, "NoMoreRedisJobs");
             }
 
+            // do not log until actual work starts
+            wrkrLogger.debug(`[START] wrkrFetchFilingSummaries: filingSummary.xml for this period's filing`);
+    
             // inside while...
             wrkrLogger.debug(`[PROCESS] Read the result, and start fetching filing summaries from `);
 
