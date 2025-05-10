@@ -1,6 +1,7 @@
+import { DiskCacheFailureCodes, HTTPStatusCodes, SECOperationFailureCodes } from "../app-config/ApplicationConfig.js";
+
 export class BaseAppError extends Error {
     public readonly statusCode: number = 500;
-    
     /**
      * @override constructor
      */
@@ -55,15 +56,7 @@ export class RemoteFetchError extends BaseAppError {
         this.name = this.constructor.name;
     }
 }
-export enum DiskCacheFailureCodes {
-    Unknown = 'UNKNOWN',
-    FileSystemRead = 'FS_READ',
-    FileSystemWrite = 'FS_WRITE',
-    FileSystemMkdir = 'FS_MKDIR',
-    FetchFailed = 'REMOTE_FETCH', // If wrapping fetch errors
-    InvalidState = 'INVALID_STATE',
-    RefreshFailed = 'REFRESH_FAILED'
-}
+
 
 export class DiskCacheError extends BaseAppError {
     constructor(
@@ -73,6 +66,60 @@ export class DiskCacheError extends BaseAppError {
     ) {
         super(message);
         this.name = 'CacheError';
+        // ... captureStackTrace ...
+    }
+}
+
+export class SECOperationError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly statusCode:number = HTTPStatusCodes.NotFound,
+        public readonly statusText:string = SECOperationFailureCodes.Unknown,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message, statusCode);
+        this.name = 'CacheError';
+        // ... captureStackTrace ...
+    }
+}
+
+export class RedisSvcError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly statusCode:number = HTTPStatusCodes.NotFound,
+        public readonly statusText:string = SECOperationFailureCodes.Unknown,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message, statusCode);
+        this.name = 'CacheError';
+        // ... captureStackTrace ...
+    }
+}
+
+
+
+
+export class FinancialStmtParsingError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly statusCode:number = HTTPStatusCodes.BadRequest,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message, statusCode);
+        this.name = 'FinancialStatementParsingError';
+        // ... captureStackTrace ...
+    }
+}
+
+
+
+export class DatabaseError extends BaseAppError {
+    constructor(
+        message: string,
+        public readonly innerError?: Error // Optional wrapped error
+    ) {
+        super(message);
+        this.name = 'DatabaseError';
         // ... captureStackTrace ...
     }
 }

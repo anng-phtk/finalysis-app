@@ -1,7 +1,6 @@
 import { RedisServiceConfig, RedisService } from "./redis.types.js";
 import { Redis, RedisOptions } from "ioredis";
 import { Log, LoggingService } from "../logging/logging.types.js";
-import { createLoggerSvc } from "../logging/LoggingSvcImpl.js";
 /**
  * this is our service for connecting to redis either in command-mode or subscriber-mode.
  * @param {RedisServiceConfig} config 

@@ -1,5 +1,7 @@
+/**
+ * @interface
+ */
 export interface RemoteFileSvcConfig {
-    headers?: Record<string, string>;
     retry: number;
     retryDelay: number;
     backOff: 2 | 3 | 4;

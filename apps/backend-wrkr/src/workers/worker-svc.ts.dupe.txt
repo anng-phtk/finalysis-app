@@ -1,0 +1,194 @@
+import {
+    CacheSvc, CacheSvcConfig, createCacheSvc,
+    createLoggingSvc, Log, LoggingService, LoggingServiceConfigOptions,
+    createRedisSvc, RedisService, RedisServiceConfig,
+    createRemoteFetchSvc, RemoteFileSvc, RemoteFileSvcConfig,
+    RedisJobsSvc,
+    createRedisJobsSvc,
+    FinancialStmtParserSvc,
+    createFinancialStmtParserSvc,
+    StatementDao,
+    createStatementDao,
+    MongoClientConfiguration,
+    createMongoConnection,
+    JobsMetadata,
+} from '@finalysis-app/shared-utils';
+
+import { configDotenv } from 'dotenv';
+
+import { wrkrLookupCIK } from './workers/lookupCIK.js';
+import { wrkrLookupRecentFilings } from './workers/lookupRecentFilings.js';
+import { wrkrFetchFilingSummaries } from './workers/fetchFilingSummaries.js';
+import { wrkrFetchStatments } from './workers/fetchStatements.js';
+import { checkActiveJobs } from './workers/checkActiveJobs.js';
+
+// define env
+configDotenv({ path: '../../.env' });
+
+
+console.timeStamp('Worker Setup');
+// initialize Logger
+const loggingOptions: LoggingServiceConfigOptions = {
+    env: 'dev',
+    type: 'both',
+    level: 'debug',
+    maxLogSize: 10000,
+    backups: 2,
+    compress: true
+};
+const loggingSvc: LoggingService = createLoggingSvc(loggingOptions);
+// is this needed here?
+
+
+// init Redis Connection
+const redisConfig: RedisServiceConfig = {
+    commandConnectionOptions: {
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT)
+    },
+    subscriberOptions: {
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT)
+    }
+};
+const redisSvc: RedisService = createRedisSvc(redisConfig, loggingSvc);
+const redisJobSvc: RedisJobsSvc = createRedisJobsSvc(redisSvc, loggingSvc);
+
+
+// initialize remoteFile fetcher, its needed for our cache file fetcher
+const fetchConfig: RemoteFileSvcConfig = {
+    timeout: 2000,
+    retryDelay: 1000,
+    retry: 3,
+    backOff: 2
+};
+const remotefetchSvc: RemoteFileSvc = createRemoteFetchSvc(fetchConfig, loggingSvc);
+
+// initialize local cache fetching
+const cacheConfig: CacheSvcConfig = {
+    cacheBaseDir: 'finalysis-app',
+    maxCacheWriteRetry: 2,
+};
+const fileSvc: CacheSvc = createCacheSvc(cacheConfig, remotefetchSvc, loggingSvc);
+const stmtParserSvc: FinancialStmtParserSvc = createFinancialStmtParserSvc(loggingSvc);
+
+
+//configure db connection
+const dbConfig: MongoClientConfiguration = {
+    uri: process.env.MONGO_HOST ?? 'mongodb://localhost:27017',
+    dbName: process.env.DB_NAME ?? 'finalysisdb'
+};
+
+//connect to the db
+const dbConnection = createMongoConnection(dbConfig, loggingSvc);
+dbConnection.connect();
+
+// create DAO service
+const statementDao: StatementDao = createStatementDao(dbConnection.getDB(), loggingSvc);
+
+
+// --------------- done
+console.timeStamp('InitDeps.');
+const logger: Log = loggingSvc.getLogger('worker');
+
+
+/*
+let isShuttingDown = false; // Manage shutdown state
+
+// Graceful shutdown handler
+const signalShutdown = () => {
+    if (!isShuttingDown) {
+        console.warn('Shutdown signal received. Loop will terminate...');
+        isShuttingDown = true;
+    }
+};
+
+process.on('SIGTERM', signalShutdown);
+process.on('SIGINT', signalShutdown);
+
+*/
+
+
+
+
+
+
+
+
+
+let channels: string[] = Object.values(JobsMetadata.ChannelNames);
+
+redisSvc.getSubscriberClient().on('connect', () => {
+    // this wrkrLogger must be passed in
+    const wrkrLogger: Log = loggingSvc.getLogger('worker-svc');
+
+    wrkrLogger.debug('redis has connected in subscriber mode');
+    wrkrLogger.debug(`subscribing to ${channels}`);
+    redisSvc.getSubscriberClient().subscribe(...channels, (err, count) => {
+        wrkrLogger.debug(`Subscribing to ${count} channels`);
+    });
+
+    redisSvc.getSubscriberClient().on('message', async (channel, message) => {
+        if (!message || message === '') {
+            wrkrLogger.error(`[LISTENING FOR MESSAGE] Got an empty message from  ${channel} :  ${message}`);
+            //throw new Error('Message does not have a valid job');
+        }
+        wrkrLogger.debug(`Got a message from  ${channel} :  ${message}`);
+
+        switch (channel) {
+            case JobsMetadata.ChannelNames.lookup_cik:
+                wrkrLogger.debug(`[run sequential worker]: wrkrLookupCIK(${message})`);
+                // start the call
+                await runCentralWorker(redisJobSvc, fileSvc, stmtParserSvc, statementDao, logger);
+                break;
+
+        }
+    })
+});
+
+const runCentralWorker = async (
+    redisJobSvc: RedisJobsSvc,
+    cacheSvc: CacheSvc,
+    stmtParserSvc: FinancialStmtParserSvc,
+    stmtDao: StatementDao,
+    wrkrLogger: Log): Promise<void> => {
+
+
+
+    console.timeStamp('Starting Worker Loop.');
+
+    let runAgain:boolean = true //
+    
+
+    while (runAgain) {
+        
+
+        wrkrLogger.debug(`[CALL Worker]: wrkrLookupCIK`);
+        let LookupCIKJob = await wrkrLookupCIK(redisJobSvc, cacheSvc, wrkrLogger);
+
+
+        wrkrLogger.debug(`[CALL Worker]:wrkrLookupRecentFilings`);
+        let LookupRecentFilingsJob:boolean = await wrkrLookupRecentFilings(redisJobSvc, cacheSvc, wrkrLogger);
+
+
+        wrkrLogger.debug(`[CALL Worker]:fetchFilingSummaries`);
+        let FetchFilingSummariesJob:boolean = await wrkrFetchFilingSummaries(redisJobSvc, cacheSvc, wrkrLogger);
+
+        wrkrLogger.debug(`[CALL Worker]:fetchStatementdata`);
+        let FetchStatmentsJob:boolean = await wrkrFetchStatments(redisJobSvc, cacheSvc, stmtParserSvc, stmtDao, wrkrLogger);
+
+
+        // take a breather
+        if (LookupCIKJob || LookupRecentFilingsJob || FetchFilingSummariesJob || FetchStatmentsJob) {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Pause only if truly idle
+        } else {
+            runAgain = false;
+            // remove
+            console.log(await checkActiveJobs(redisSvc));
+        }
+
+        await setImmediate(() => {
+            console.log('done');
+        }); // Yield
+    }
+}  

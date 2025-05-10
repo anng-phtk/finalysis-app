@@ -5,7 +5,8 @@ import { homedir } from "os";
 import { Log, LoggingService } from "../logging/logging.types.js";
 import { RemoteFileSvc } from "../remote-fetch/remotefetch.types.js";
 import { CacheFileOptions, CacheSvc, CacheSvcConfig } from "./cachesvc.types.js";
-import { DiskCacheError, DiskCacheFailureCodes } from "../error-handlers/app-errors.js";
+import { DiskCacheError } from "../error-handlers/app-errors.js";
+import { DiskCacheFailureCodes } from "../app-config/ApplicationConfig.js";
 
 
 class CacheSvcImpl implements CacheSvc {
@@ -41,8 +42,10 @@ class CacheSvcImpl implements CacheSvc {
             try {
                 // check if file is in cache
                 this.cachelog.debug(`[IN PROGRESS] Looking for the file in cache.`);
-
+                
+                // check if this is a type of file thats refreshable
                 if (fileOptions.canRefresh) {
+                    // if file is more than 60 days old, we need a new one only if refreshCache is set to true
                     const fileModifiedDate = (await fs.promises.stat(path.join(this.baseDirPath, fileOptions.subDir, fileOptions.fileName))).mtime;
                 
                     this.cachelog.debug(`[SUCCESS] Found file ${fileOptions.fileName} in cache. It was last modified on ${fileModifiedDate}.`);
@@ -60,9 +63,6 @@ class CacheSvcImpl implements CacheSvc {
                     encoding:'utf-8'
                 }); 
                 
-                // if file is more than 60 days old, we need a new one only if refreshCache is set to true
-
-
                 return file;
                 
             // if it fails, throw an error
@@ -98,7 +98,7 @@ class CacheSvcImpl implements CacheSvc {
 
         // After the while loop
         this.cachelog.error(`Failed to get file ${fileOptions.fileName} from cache after ${this.config.maxCacheWriteRetry ?? 2} attempts.`);
-        throw new DiskCacheError(`Failed to get file ${fileOptions.fileName} after retries`, DiskCacheFailureCodes.Unknown);
+        throw new DiskCacheError(`Failed to get file ${fileOptions.fileName} after retries`, DiskCacheFailureCodes.NothingToFetch);
     }
 
     /**

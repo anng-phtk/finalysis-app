@@ -1,5 +1,4 @@
-import { createLoggerSvc, Log, LoggingService } from "@finalysis-app/shared-utils";
-import { log } from "console";
+import { Log, LoggingService } from "@finalysis-app/shared-utils";
 import { IncomingMessage } from "http";
 import { WebSocket, WebSocketServer } from "ws";
 

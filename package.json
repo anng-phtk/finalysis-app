@@ -4,7 +4,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx nodemon -w [\"apps/*/src/**/*\",\"packages/*/src/**/*\"] --ext ts --exec \"npm run build --workspace @finalysis-app/shared-utils\""
   },
   "keywords": [],
   "author": "Anang A. Phatak",
@@ -18,6 +19,7 @@
   "devDependencies": {
     "@types/dotenv": "^6.1.1",
     "@types/node": "^22.14.0",
+    "nodemon": "^3.1.9",
     "typescript": "^5.8.3"
   },
   "dependencies": {

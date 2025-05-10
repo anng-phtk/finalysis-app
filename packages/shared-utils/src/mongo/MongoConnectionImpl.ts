@@ -14,10 +14,10 @@ class MongoConnectionServiceImpl implements MongoConnectionService {
      * @param {MongoClientConfiguration} config - passing in uri: "mongodb://192.186.1.96:27017" and db:finalysis-app 
      * @param logger - log4js logger with .debug(), .warn, .erroor methods for logging
       */
-    constructor(config:MongoClientConfiguration, logger:LoggingService) {
+    constructor(config:MongoClientConfiguration, loggingSvc:LoggingService) {
         this.config = config;
 
-        this.log = logger.getLogger('mongdb');
+        this.log = loggingSvc.getLogger('mongdb');
         this.client = new MongoClient(config.uri);
         this.db = this.client.db(config.dbName);
         this.registerListeners();
