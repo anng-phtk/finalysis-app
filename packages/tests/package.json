@@ -1,0 +1,21 @@
+{
+  "name": "@finalysis-app/tests",
+  "version": "1.0.0",
+  "description": "Testing for several different HTML formats encountered during parsing",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "author": "Anang A. Phatak",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^22.15.17",
+    "@types/xml2js": "^0.4.14",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "jsdom": "^26.1.0",
+    "xml2js": "^0.6.2"
+  }
+}

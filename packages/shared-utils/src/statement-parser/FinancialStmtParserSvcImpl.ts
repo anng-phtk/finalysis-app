@@ -1,30 +1,13 @@
-// Suggested location: packages/shared-utils/src/statement-parser/FinancialStmtParserSvcImpl.ts
-// Or: packages/financial-stmt-parser-svc/src/FinancialStmtParserSvcImpl.ts
-
-//import { JSDOM } from 'jsdom';
-//import { Log, LoggingService } from "../logging/logging.types.js"; // Adjust path if needed
-//import { FinancialStmtParserSvc } from './financial-stmts.types.js'; // Adjust path
-//import { FinancialStmtParsingError } from '../error-handlers/app-errors.js'; // Adjust path
-//import { HTTPStatusCodes } from '../app-config/ApplicationConfig.js'; // Adjust path
-
-
-// Suggested location: packages/shared-utils/src/statement-parser/FinancialStmtParserSvcImpl.ts
-// Or: packages/financial-stmt-parser-svc/src/FinancialStmtParserSvcImpl.ts
-
 import { JSDOM } from 'jsdom';
-import { Log, LoggingService } from "../logging/logging.types.js"; // Adjust path if needed
-// Assuming these types are correctly defined in the imported file
-import { FinancialStmtParserSvc } from './financial-stmts.types.js'; // Adjust path
-import { FinancialStmtParsingError } from '../error-handlers/app-errors.js'; // Adjust path
-import { HTTPStatusCodes } from '../app-config/ApplicationConfig.js'; // Adjust path
+import { Log, LoggingService } from '../logging/logging.types.js';
+import { FinancialStmtMetadata, FinancialStmtParserSvc, ParsedStatement } from './financial-stmts.types.js'
+import { FinancialStmtParsingError } from '../error-handlers/app-errors.js'
+import { HTTPStatusCodes } from '../app-config/ApplicationConfig.js'
 
 class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
     private parserLogger: Log;
 
-    // --- Expanded Normalization Map ---
-    // Key: lowercase, cleaned-up version of raw label
-    // Value: Your desired standardized key (camelCase) OR null to ignore
-    // CORRECTED TYPE: Allow string OR null as values
+    // --- Expanded Normalization Map with Consistent Spacing ---
     private readonly lineItemMap: Record<string, string | null> = {
         // --- Income Statement ---
         'revenue': 'Revenue',
@@ -51,22 +34,22 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
         'total operating expenses': 'Operating Expenses',
         'restructuring and other charges': 'Restructuring And Other Charges',
         'restructuring and other special charges net': 'Restructuring And Other Charges',
-        'amortization of acquired intangible assets': 'Amortization Of Intangibles',
+        'amortization of acquired intangible assets': 'Amortization Of Intangible Assets',
         'operating income (loss)': 'Operating Income',
         'income from operations': 'Operating Income',
         'loss from operations': 'Operating Income',
         'interest expense': 'Interest Expense',
-        'interest expense net': 'Interest Expense Net', // Combine income/expense?
+        'interest expense net': 'Interest Expense Net',
         'interest income': 'Interest Income',
         'other income (expense) net': 'Other Income Expense Net',
         'other income expense net': 'Other Income Expense Net',
         'other income net': 'Other Income Expense Net',
         'other expense net': 'Other Income Expense Net',
-        'income before income taxes': 'Income Before Tax',
-        'income (loss) before income taxes': 'Income Before Tax',
-        'earnings before income taxes': 'Income Before Tax',
-        'loss before income taxes': 'Income Before Tax',
-        'income (loss) before income taxes and equity loss': 'Income Before Tax',
+        'income before income taxes': 'Income Before Taxes',
+        'income (loss) before income taxes': 'Income Before Taxes',
+        'earnings before income taxes': 'Income Before Taxes',
+        'loss before income taxes': 'Income Before Taxes',
+        'income (loss) before income taxes and equity loss': 'Income Before Taxes',
         'provision for income taxes': 'Income Tax Expense',
         'income tax expense': 'Income Tax Expense',
         'income tax expense (benefit)': 'Income Tax Expense',
@@ -74,21 +57,21 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
         'net income (loss)': 'Net Income',
         'net earnings': 'Net Income',
         'net loss': 'Net Income',
-        'net income attributable to stockholders': 'Net Income', // Common variation
+        'net income attributable to stockholders': 'Net Income',
         'net income (loss) attributable to parent': 'Net Income',
-        'net income per share': 'Earnings Per Share Basic', // Specify basic/diluted later?
+        'net income per share': 'Earnings Per Share Basic',
         'basic net income per share': 'Earnings Per Share Basic',
         'diluted net income per share': 'Earnings Per Share Diluted',
-        'basic (in usd per share)': 'Earnings Per Share Basic', // From example
-        'diluted (in usd per share)': 'Earnings Per Share Diluted', // From example
-        'basic': 'Earnings Per Share Basic', // Needs context, might be too generic
-        'diluted': 'Earnings Per Share Diluted', // Needs context, might be too generic
+        'basic (in usd per share)': 'Earnings Per Share Basic',
+        'diluted (in usd per share)': 'Earnings Per Share Diluted',
+        'basic': 'Earnings Per Share Basic',
+        'diluted': 'Earnings Per Share Diluted',
         'weighted average shares outstanding basic': 'Weighted Average Shares Basic',
         'weighted average shares used in basic per share computation': 'Weighted Average Shares Basic',
-        'basic (in shares)': 'Weighted Average Shares Basic', // From example
+        'basic (in shares)': 'Weighted Average Shares Basic',
         'weighted average shares outstanding diluted': 'Weighted Average Shares Diluted',
         'weighted average shares used in diluted per share computation': 'Weighted Average Shares Diluted',
-        'diluted (in shares)': 'Weighted Average Shares Diluted', // From example
+        'diluted (in shares)': 'Weighted Average Shares Diluted',
 
         // --- Balance Sheet ---
         'cash and cash equivalents': 'Cash And Cash Equivalents',
@@ -100,13 +83,13 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
         'inventories net': 'Inventories',
         'prepaid expenses and other current assets': 'Prepaid Expenses And Other Current Assets',
         'total current assets': 'Total Current Assets',
-        'property and equipment net': 'Property Plant Equipment Net',
-        'property plant and equipment net': 'Property Plant Equipment Net',
+        'property and equipment net': 'Property Plant And Equipment Net',
+        'property plant and equipment net': 'Property Plant And Equipment Net',
         'operating lease right-of-use assets': 'Operating Lease Right Of Use Assets',
         'goodwill': 'Goodwill',
         'intangible assets net': 'Intangible Assets Net',
         'intangible assets net (excluding goodwill)': 'Intangible Assets Net',
-        'acquisition-related intangibles': 'Intangible Assets Net', // Map variation
+        'acquisition-related intangibles': 'Intangible Assets Net',
         'acquisition-related intangibles net': 'Intangible Assets Net',
         'deferred tax assets': 'Deferred Tax Assets',
         'deferred tax assets net': 'Deferred Tax Assets',
@@ -118,7 +101,7 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
         'accrued expenses': 'Accrued Liabilities',
         'accrued and other current liabilities': 'Accrued Liabilities',
         'short-term debt': 'Short Term Debt',
-        'current portion of long-term debt net': 'Short Term Debt', // Often includes current portion
+        'current portion of long-term debt net': 'Short Term Debt',
         'total current liabilities': 'Total Current Liabilities',
         'long-term debt': 'Long Term Debt',
         'long-term debt net': 'Long Term Debt Net',
@@ -129,7 +112,7 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
         'other long-term liabilities': 'Other Long Term Liabilities',
         'total liabilities': 'Total Liabilities',
         'common stock value issued': 'Common Stock Value',
-        'common stock': 'Common Stock Value', // May need refinement based on context (value vs shares)
+        'common stock': 'Common Stock Value',
         'additional paid-in capital': 'Additional Paid In Capital',
         'treasury stock value': 'Treasury Stock Value',
         'treasury stock at cost': 'Treasury Stock Value',
@@ -139,59 +122,54 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
         'accumulated other comprehensive income': 'Accumulated Other Comprehensive Income',
         'accumulated other comprehensive loss': 'Accumulated Other Comprehensive Income',
         'accumulated other comprehensive income (loss)': 'Accumulated Other Comprehensive Income',
-        'total stockholders’ equity': 'Total Stockholders Equity',
+        'total stockholders equity': 'Total Stockholders Equity',
         'total shareholders equity': 'Total Stockholders Equity',
         'total equity': 'Total Stockholders Equity',
-        'total liabilities and stockholders’ equity': 'Total Liabilities And Stockholders Equity',
+        'total liabilities and stockholders equity': 'Total Liabilities And Stockholders Equity',
         'total liabilities and shareholders equity': 'Total Liabilities And Stockholders Equity',
 
         // --- Cash Flow Statement ---
-        'net cash provided by operating activities': 'Net Cash From Operating Activities',
-        'net cash provided by (used in) operating activities': 'Net Cash From Operating Activities',
-        'cash flows from operating activities:': 'Net Cash From Operating Activities', // Often a section header
+        'net cash provided by operating activities': 'Net Cash Provided By Operating Activities',
+        'net cash provided by (used in) operating activities': 'Net Cash Provided By Operating Activities',
+        'cash flows from operating activities': 'Net Cash Provided By Operating Activities',
         'depreciation and amortization': 'Depreciation And Amortization',
         'stock-based compensation expense': 'Stock Based Compensation',
-        'changes in operating assets and liabilities net of effects of acquisitions:': 'Change In Operating Assets Liabilities',
-        'net cash used in investing activities': 'Net Cash From Investing Activities',
-        'net cash provided by (used in) investing activities': 'Net Cash From Investing Activities',
-        'cash flows from investing activities:': 'Net Cash From Investing Activities',
-        'purchases of property and equipment': 'Purchases Of Property Plant Equipment',
-        'purchases of property and equipment and intangible assets': 'Purchases Of Property Plant Equipment',
+        'changes in operating assets and liabilities net of effects of acquisitions': 'Change In Operating Assets And Liabilities',
+        'net cash used in investing activities': 'Net Cash Used In Investing Activities',
+        'net cash provided by (used in) investing activities': 'Net Cash Used In Investing Activities',
+        'cash flows from investing activities': 'Net Cash Used In Investing Activities',
+        'purchases of property and equipment': 'Purchases Of Property And Equipment',
+        'purchases of property and equipment and intangible assets': 'Purchases Of Property And Equipment',
         'purchases of marketable securities': 'Purchases Of Marketable Securities',
-        'proceeds from sales of marketable securities': 'Proceeds From Sale Of Marketable Securities',
+        'proceeds from sales of marketable securities': 'Proceeds From Sales Of Marketable Securities',
         'proceeds from maturities of marketable securities': 'Proceeds From Maturities Of Marketable Securities',
-        'net cash provided by financing activities': 'Net Cash From Financing Activities',
-        'net cash (used in) provided by financing activities': 'Net Cash From Financing Activities',
-        'cash flows from financing activities:': 'Net Cash From Financing Activities',
+        'net cash provided by financing activities': 'Net Cash Provided By Financing Activities',
+        'net cash (used in) provided by financing activities': 'Net Cash Provided By Financing Activities',
+        'cash flows from financing activities': 'Net Cash Provided By Financing Activities',
         'payments for repurchase of common stock': 'Payments For Repurchase Of Common Stock',
         'dividends paid': 'Dividends Paid',
         'proceeds from issuance of common stock': 'Proceeds From Issuance Of Common Stock',
-        'net proceeds (payments) related to employee stock plans': 'Proceeds Payments Related To Stock Plans',
+        'net proceeds (payments) related to employee stock plans': 'Net Proceeds Related To Employee Stock Plans',
         'repayments of long-term debt': 'Repayments Of Long Term Debt',
         'proceeds from issuance of long-term debt': 'Proceeds From Issuance Of Long Term Debt',
         'change in cash and cash equivalents': 'Change In Cash And Cash Equivalents',
-        'cash and cash equivalents at beginning of period': 'Cash And Cash Equivalents Beginning',
-        'cash and cash equivalents at end of period': 'Cash And Cash Equivalents Ending',
+        'cash and cash equivalents at beginning of period': 'Cash And Cash Equivalents At Beginning Of Period',
+        'cash and cash equivalents at end of period': 'Cash And Cash Equivalents At End Of Period',
 
         // --- Equity Statement ---
         'beginning balance': 'Beginning Balance',
         'ending balance': 'Ending Balance',
 
         // --- Common Headers/Ignored Rows ---
-        // Map explicitly ignored keys to null
-        'current assets:': null,
-        'current liabilities:': null,
-        'stockholders’ equity:': null,
-        'shareholders’ equity:': null,
-        'capital stock:': null,
-        //'cash flows from operating activities: ': '',
+        'current assets': null,
+        'current liabilities': null,
+        'stockholders equity': null,
+        'shareholders equity': null,
+        'capital stock': null,
         'commitments and contingencies': null,
         'see accompanying notes': null,
         'see notes to consolidated financial statements': null,
     };
-
-    
-    // -------------------------
 
     constructor(loggingSvc: LoggingService) {
         this.parserLogger = loggingSvc.getLogger('FinancialStmtParserSvc');
@@ -202,6 +180,8 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
      */
     private normalizeKey(rawKey: string | null | undefined): string | null {
         if (!rawKey) return null;
+
+        // Enhanced cleaning logic
         const cleanedKey = rawKey.toLowerCase()
             .replace(/see accompanying notes? to consolidated financial statements?/g, '')
             .replace(/see note[s]? \d+( and \d+)?/g, '')
@@ -209,296 +189,247 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
             .replace(/\([a-z0-9]+\)/g, '')
             .replace(/[:]$/, '')
             .replace(/[$,*]/g, '')
-            .replace(/[^a-z0-9\s\-\.\(\)]/g, '')
-            .replace(/\s+/g, ' ')
+            .replace(/[^a-z0-9\-\.\(\)\s]/g, '')  // <-- allow whitespace
+            .replace(/\s+/g, ' ')                 // normalize spaces
             .trim();
+
         if (!cleanedKey) return null;
+
         const standardKey = this.lineItemMap[cleanedKey];
         if (standardKey !== undefined) {
-            if (standardKey === null) { this.parserLogger.warn(`Ignoring mapped key: "${rawKey}"`); return null; }
-            this.parserLogger.warn(`Normalized "${rawKey}" -> "${standardKey}"`);
+            if (standardKey === null) {
+                this.parserLogger.debug(`Ignoring mapped key: "${rawKey}"`);
+                return null;
+            }
+            this.parserLogger.debug(`Normalized "${rawKey}" -> "${standardKey}"`);
             return standardKey;
-        } else {
-            this.parserLogger.warn(`Unmapped line item key found: "${rawKey}" (cleaned: "${cleanedKey}")`);
-            return cleanedKey; // Return cleaned key for unmapped items
         }
+
+        // For unmapped keys, convert to nicely spaced format
+        const formattedKey = cleanedKey
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        this.parserLogger.warn(`Unmapped line item key found: "${rawKey}" (formatted as: "${formattedKey}")`);
+        return formattedKey;
     }
 
     /**
      * Parses an Equity Statement HTML table.
-     * CORRECTED RETURN TYPE
      */
-    public parseEquityStatement(htmContent: string): Array<Record<string, string[]|number[]>> {
-        this.parserLogger.info(`[EQUITY]: start parsing`);
-        const filingData:any[] = [];
+    public parseEquityStatement(htmlContent: string):ParsedStatement { 
+    //Array<Record<string, string[] | number[]>> 
+    
+        this.parserLogger.info(`[EQUITY]: Start parsing`);
+        const equityData: Array<Record<string, string[]|number[]>> = [];
+        
+        let metadata:FinancialStmtMetadata = {
+            currency: '',
+            units: '',
+            dataColIndex: 1,
+            dataRowIndex: 1,
+            stmtType: '',
+            period: '',
+            otherData: ''
+        };
+
+
         try {
-            const dom = new JSDOM(htmContent);
+            const dom = new JSDOM(htmlContent);
             const doc = dom.window.document;
             const table = doc.querySelector('table.report');
-            if (!table) throw new Error('No Equity Statement table found (selector: table.report)');
+
+            if (!table) {
+                throw new Error('No Equity Statement table found (selector: table.report)');
+            }
 
             const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll('tr');
-            if (!contentRows || contentRows.length === 0) throw new Error('No rows found in equity table');
+            if (!contentRows || contentRows.length === 0) {
+                throw new Error('No rows found in equity table');
+            }
 
             contentRows.forEach((row: HTMLTableRowElement, rowIdx: number) => {
                 const cells: NodeListOf<HTMLTableCellElement> = row.querySelectorAll('td');
+
                 if (cells.length > 1) {
                     const rawDataTitle = cells[0].textContent;
                     const standardKey = this.normalizeKey(rawDataTitle);
 
                     if (standardKey) {
                         const dataItems: number[] = [];
+
                         for (let cellIdx = 1; cellIdx < cells.length; cellIdx++) {
                             const cell = cells[cellIdx];
                             const value = cell.textContent?.replace(/[$,()]/g, '').trim() || "0";
-                            let numericValue = parseFloat(value) * (cell.textContent?.includes('(') ? -1 : 1);
+                            const numericValue = parseFloat(value) * (cell.textContent?.includes('(') ? -1 : 1);
                             dataItems.push(isNaN(numericValue) ? 0 : Number(numericValue));
                         }
-                        const record  = { [standardKey]: dataItems };
-                        filingData.push(record);
+
+                        equityData.push({ [standardKey]: dataItems });
                     } else if (rawDataTitle?.trim()) {
-                         this.parserLogger.debug(`[EQUITY] Skipping row ${rowIdx + 1} due to unmapped/empty key: "${rawDataTitle}"`);
+                        this.parserLogger.debug(`[EQUITY] Skipping row ${rowIdx + 1} due to unmapped/empty key: "${rawDataTitle}"`);
                     }
                 }
             });
-            this.parserLogger.info(`[EQUITY]: Parsed ${filingData.length} data rows.`);
-            return filingData;
+
+            this.parserLogger.info(`[EQUITY]: Parsed ${equityData.length} data rows.`);
+            const parsedData:ParsedStatement = {
+                metadata, 
+                equityData
+            };
+
+            return parsedData;
         } catch (error: any) {
             this.parserLogger.error(`[EQUITY] Parsing Error: ${error.message}`, error);
-            throw new FinancialStmtParsingError(`Error parsing equity statement: ${error.message}`, HTTPStatusCodes.InternalServerError);
+            throw new FinancialStmtParsingError(
+                `Error parsing equity statement: ${error.message}`,
+                HTTPStatusCodes.InternalServerError
+            );
         }
     }
 
     /**
-     * Parses a standard (single-value column) Statement HTML table.
-     * CORRECTED RETURN TYPE
+     * Parses a standard financial statement HTML table.
      */
-    public parseStatement(htmContent: string): Array<Record<string, string|number>> {
-         this.parserLogger.info(`[STANDARD STMT]: start parsing`);
-        const data: Array<any> = [];
+    public parseStatement(htmlContent: string): ParsedStatement {
+    // Array<Record<string, string | number>>
+
+        this.parserLogger.info(`[STANDARD STATEMENT]: Start parsing`);
         try {
-            const dom = new JSDOM(htmContent);
-            const doc = dom.window.document;
-            const table = doc.querySelector('table.report');
-            if (!table) throw new Error('No Statement table found (selector: table.report)');
+            const dom: JSDOM = new JSDOM(htmlContent);
+            const doc: Document = dom.window.document;
 
-            const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll('tr');
-             if (!contentRows || contentRows.length === 0) throw new Error('No rows found in statement table');
 
-            contentRows.forEach((row: HTMLTableRowElement, rowIdx: number) => {
-                const cells: NodeListOf<HTMLTableCellElement> = row.querySelectorAll('td');
-                if (cells.length >= 2) {
-                    const rawDataTitle = cells[0].textContent;
-                    const standardKey = this.normalizeKey(rawDataTitle);
+            const stmtData: Array<Record<string, string | number>> = [];
+            // ------------------------------------------
+            // start setup
 
-                    if (standardKey) {
-                        const valueCell = cells[1];
-                        const value = valueCell.textContent?.replace(/[$,()]/g, '').trim() || "0";
-                        let numericValue = parseFloat(value) * (valueCell.textContent?.includes('(') ? -1 : 1);
+            let metadata:FinancialStmtMetadata = {
+                currency: '',
+                units: '',
+                dataColIndex: 1,
+                dataRowIndex: 1,
+                stmtType: '',
+                period: '',
+                otherData: ''
+            };
 
-                        const record = {
-                            [standardKey]: isNaN(numericValue) ? 0 : Number(numericValue.toFixed(2))
-                        };
-                        data.push(record);
-                    } else if (rawDataTitle?.trim()) {
-                         this.parserLogger.debug(`[STANDARD STMT] Skipping row ${rowIdx + 1} due to unmapped/empty key: "${rawDataTitle}"`);
+
+            let units: string = '';
+            let [dataCol, dataRow]: [number, number] = [0, 0];
+
+            let stmtType: string = '';
+            let [period, otherData]: [string, string] = ['', ''];
+
+            // end setup
+            // ------------------------
+
+            // select the table for parsing
+            const table: HTMLTableElement | null = doc.querySelector('table.report');
+
+            if (!table) throw new Error('Table with className=report was not found')
+
+            // select header rows for parsing
+            const headerCellCollection: NodeListOf<HTMLTableCellElement> = table.querySelectorAll('th');
+
+            if (!headerCellCollection) throw new Error("No header cells found");
+
+
+            headerCellCollection.forEach((headerCell: HTMLTableCellElement, index: number) => {
+                // we only care about the 1st cell for now, whch will tell us the x,y of statement numerical data
+                if (index === 0) {
+                    if (headerCell.hasAttribute('colspan')) {
+                        console.log(headerCell.colSpan);
+                        dataCol = Number(headerCell.colSpan) || 1;
                     }
-                }
-            });
-            this.parserLogger.info(`[STANDARD STMT]: Parsed ${data.length} data rows.`);
-            return data;
-        } catch (error: any) {
-            this.parserLogger.error(`[STANDARD STMT] Parsing Error: ${error.message}`, error);
-            throw new FinancialStmtParsingError(`Error parsing financial statement: ${error.message}`, HTTPStatusCodes.InternalServerError);
-        }
-    }
-}
 
-// Keep the cached factory pattern
-let parserInstance: FinancialStmtParserSvc | null = null;
-export const createFinancialStmtParserSvc = (loggingSvc: LoggingService): FinancialStmtParserSvc => {
-    if (!parserInstance) {
-        parserInstance = new FinancialStmtParserSvcImpl(loggingSvc);
-    }
-    return parserInstance;
-}
+                    if (headerCell.hasAttribute('rowspan')) {
+                        console.log(headerCell.rowSpan);
+                        dataRow = Number(headerCell.rowSpan) || 1;
+                    }
+                    let stmtMd: string = String(headerCell.textContent) || '';
+                    if (stmtMd !== null || stmtMd !== '') {
+                        console.log(`Searching ${stmtMd}`)
+                        //const currency:string = (stmtMd.search(/(\$|USD)*/ig) ? 'USD';
 
+                        const unitsFound: string[] = stmtMd.match(/((B|M)?illion+(s)?)/ig) || [''];
+                        units = unitsFound[0];
 
-/**
- * ******************************************************************
- * */ 
+                        let stmtTypeMD: string[] | null = stmtMd.match(/(income statement|balance sheet|cash (flows|flow))/i); //stmtMd.match(/Balance|Income|Cash/ig);
+                        const stmtTypeMatch = stmtMd.match(/(income statement|balance sheet|cash (flows|flow))/i);
 
-
-
-class FinancialStmtParserSvcImplOld implements FinancialStmtParserSvc {
-    private parserLogger:Log;
-    constructor (loggingSvc:LoggingService) {
-        this.parserLogger = loggingSvc.getLogger('parser');
-    }
-
-    /**
-     * @override
-     * @params {string} [htmlContent] - pass in the raw html string
-     * */
-    public parseEquityStatement(htmContent:string):Array<Record<string, string[]|number[]>> {
-        let stmtTitle:string = '';
-        let dataHeader:string[] = [];
-        let filingData = [];
-           
-        this.parserLogger.info(`[EQUITY]: start parsing`);
-        try {
-            // -----------------------------------------------------
-            // start table parsing
-            const dom = new JSDOM(htmContent);
-            const doc = dom.window.document;
-    
-            // find the table with class "report"
-            const table = doc.querySelector('table.report');
-            if (!table) throw new Error('No Statement table found');
-            
-            let headerCells:NodeListOf<HTMLTableCellElement> = table?.querySelectorAll('th');
-            if (!headerCells) throw new Error('FinancialStatement header rows error!');
-    
-            headerCells.forEach((headerCell:HTMLTableCellElement, headerCellIdx:number)=> {
-                // first cell is the statement metadata cell
-                if (headerCellIdx === 0) {
-                    if (!headerCell.textContent) throw new Error('FianncialStatementError', {cause:'Header cell at index 0 is empty or not found'});
-                    // @todo: need to run regexpt to find Millions
-                    stmtTitle = headerCell.textContent?.trim().replaceAll(/\s+|\n+|\r+/ig, ' ');
-
-                    this.parserLogger.info(`[EQUITY]: headers: ${stmtTitle}`);
-                }
-                else {
-                    // we need to protect againt strange colspan attributes here which house strings like '3 months ending|6 months ending'
-                    if (headerCell.getAttribute('colSpan')) return; // @todo: we will capture that in statement metadata. 
-    
-                    this.parserLogger.info(`[EQUITY]: column: ${headerCell.textContent}`);
-                    // @todo: DRY
-                    dataHeader.push(headerCell.textContent?.trim().replaceAll(/\s+|\n\r+|(\([^]\))/ig, ' ')??'N/A');
-                }
-            })
-
-            
-            filingData.push({'headers': dataHeader});
-    
-            let data:Array<Record <string, string|number>>;
-    
-            let contentRows: NodeListOf<HTMLTableRowElement> | null = table.querySelectorAll('tr');
-            if (!contentRows) throw new Error('no rows');
-    
-            contentRows.forEach((row: HTMLTableRowElement, rowIdx: number): void => {
-                const cells: NodeListOf<HTMLTableCellElement> = row.querySelectorAll('td');
-    
-                // Only process if there are cells in the row
-                if (cells.length > 0) {
-                    let data: Record<string, Array<number>> = {};
-                    let dataTitle: string = '';
-                    let dataItems: number[] = [];
-    
-                    cells.forEach((cell: HTMLTableCellElement, cellIdx: number) => {
-                        if (cellIdx === 0) {
-                            dataTitle = cell.textContent?.trim().replaceAll(/\s+|\n\r+/g, ' ') || 'N/A';
-                        } else {
-                            //let item = cell.textContent?.trim().replaceAll(/\s|\$|\n+|\r+|\)+/g, '') ?? '0.00';
-                            //item = (item.replaceAll(/\(+/g, '-'));
-                            //let val = parseFloat(item);
-    
-                            const value = cell.textContent?.replace(/[$,()]/g, '').trim() || "0";
-                            let numericValue = parseFloat(value) * (cell.textContent?.includes('(') ? -1 : 1);
-                            if (isNaN(numericValue)) {
-                                dataItems.push(0);
-                            } else {
-                                dataItems.push(Number(numericValue));
-                            }
+                        if (stmtTypeMatch) {
+                            if (/income/i.test(stmtTypeMatch[0])) stmtType = 'income';
+                            else if (/balance/i.test(stmtTypeMatch[0])) stmtType = 'balance';
+                            else if (/cash/i.test(stmtTypeMatch[0])) stmtType = 'cash';
                         }
-                        data[dataTitle] = dataItems;
-                    });
-                    filingData?.push(data);
+                    }
+
                 }
-            });
-    
-            return filingData;
-        } catch (error) {
-            // rethrow for invoker to catch
-            this.parserLogger.error(`[EQUITY]: ${error}`);
-            throw new FinancialStmtParsingError('Error occurred while parsing financial statement' , HTTPStatusCodes.BadRequest);
-        }
-    }
-
-    /**
-     * @override
-     * @param {string} [htmlContent] - takes the 
-     * */
-    public parseStatement(htmContent:string):Array<Record<string, string|number>> {
-        try {
-            let title: string = '';
-            let metadata: string[] = [];
-
-            
-            // -----------------------------------------------------
-            // start table parsing
-
-            const dom = new JSDOM(htmContent);
-            const doc = dom.window.document;
-
-            // find the table with class "report"
-            const table = doc.querySelector('table.report');
-
-            // ------------------------------------------------------
-            // parse header cell for title and period
-            const headerCells = table?.querySelectorAll('th');
-            if (!headerCells) throw new Error('headerCells are null');
-
-            let headers: string[] = [];
-            let colSpan: number = 0;
-            let period: string = ''
-            headerCells.forEach((cell, idx) => {
-                // aumme that the 1st header cell is alwats title and some content
-                if (idx === 0) {
-                    title = cell.textContent?.trim().replaceAll(/\s+/g, ' ') || '';
-                }
-                // then the 
                 else {
-                    if (cell.getAttribute('colSpan')) {
-                        colSpan = Number(cell.getAttribute('colSpan'))
-                        // todo: we do not know what to do with this data.
-                        // it contains info like '3 mo ending, 6 mo ending for 10Q which is useful' 
-                        // for now ignore ot
-                        // if colSpan = 1, carry fwd to next cell
-                        // if colSpan = 2, then we need to run some % on the number of cells that follow
+                    // we are not in the 1st cell, 
+                    // here we can again check for rowSpan which contain period ending or other info
+                    // now we can see if we can find "reporting periods"
+                    let temp: string[] = [];
+                    if (headerCell.getAttribute('colspan')) {
+                        otherData = (headerCell.textContent || '');
                     }
                     else {
-                        headers.push(cell.textContent?.trim() || '');
-                        period = cell.textContent?.trim() || ''
+                        if (dataCol === index) period = headerCell.textContent || '';
                     }
+                }
+
+                metadata = {
+                    currency: 'USD', // not yet parsed, assumed to be USD because we are only dealing with US listed companies
+                    units: units,
+                    dataColIndex: dataCol,   // we have already captured this
+                    dataRowIndex: dataRow,   // already captured this
+                    stmtType: stmtType,   // good to capture this 
+                    period: period,
+                    otherData: otherData
                 }
             });
 
-            const contentRows = table?.querySelectorAll('table.report tr');
-            let data: Array<Record<string, number>> = [];
 
-            contentRows?.forEach(row => {
-                const contentCells = row.querySelectorAll('td');
+            //const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll('table.report tr');
+            // better control over our selections
+            const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll(':scope > tbody > tr, :scope > tr');
+    
+            if (!contentRows || contentRows.length === 0) {
+                throw new Error('No rows found in statement table');
+            }
 
-                // the table is likely strucuted like
-                //   BALANCE SHEET            |    2024    |    2023    |    2022   |
-                //   item                     |      12,00 |       1100 |      1000 |
-                // find, how many cells in a row?  
-                // if 2, then we have 1 record (i.e. only 2024 data)
-                // if 3, then 2 records (i.e. data for 2024, and 2023)
-                // if 4 the 3 years of data
+            // lets try a nested loop approach to concretely tell where the start of our data rows is
+            // outter loops over trs, inner goes over tds only
+            contentRows.forEach((row: HTMLTableRowElement, rowIdx: number) => {
+                const contentCells: NodeListOf<HTMLTableCellElement> = row.querySelectorAll('td');
 
                 let cellsPerRow: number = row.childElementCount;
 
                 let record: Record<string, number> = {};
                 let dataTitle: string = '';
-                let dataItem:number = 0.00;
+                let dataItem: number = 0.00;
 
-                contentCells.forEach((cell:HTMLTableCellElement, index:number) => {
-                    if (index === 0) {
+                contentCells.forEach((cell: HTMLTableCellElement, cellIdx: number) => {
+                 
+                    // sometimes these tables generate footnotes
+                    // todo: find a way to capture, but lets not pollute the JSON structure
+                    // for now, just remove those
+                    if ((cell.getAttribute('colSpan') && cell.colSpan > 1)) {       
+                        if (cell.firstElementChild?.tagName === 'TABLE') {
+                            this.parserLogger.warn(`found a nested table possibly a foot note. ${cell.firstElementChild.tagName}`);
+                            cell.innerHTML = '';
+                        }
+                    }
+                    if (cellIdx === 0) {
                         dataTitle = String(cell.textContent?.trim().replaceAll(/\s+/g, ' '));
                     }
-                    else if (index === 1) {
+                    else if (cellIdx === dataCol) {
+                        
+                        // we don't need this noise
+                        if (cell.getAttribute('colSpan') && cell.colSpan > 1) return;
+
                         //const value = cell.textContent?.replace(/[$,()]/g, '').trim() || "0";
                         //const numericValue = isNaN(parseFloat(value)) ? value : parseFloat(value) * (cell.textContent?.includes('(') ? -1 : 1);
                         const value = cell.textContent?.replace(/[$,()]/g, '').trim() || "0";
@@ -510,25 +441,215 @@ class FinancialStmtParserSvcImplOld implements FinancialStmtParserSvc {
                     }
                 });
 
-                record[dataTitle] = dataItem;
+                //record[dataTitle] = dataItem;
+                const cleanedKey = this.normalizeKey(dataTitle);
+                record[cleanedKey ?? dataTitle] = dataItem;
+
                 //console.log(record);
+                if (dataTitle !== '') stmtData.push(record);
+            });
 
-                if (dataTitle !== '') data.push(record);
-            })
+            //console.log(metadata);
+            //console.log(data);
 
-           return data;
-        } catch (error) {
-            // rethrow for invoker to catch
-            this.parserLogger.error(`[FIN STMT]: ${error}`);
-            throw new FinancialStmtParsingError('Error occurred while parsing financial statement' , HTTPStatusCodes.BadRequest);
+            // return data;
+
+            const parsedData:ParsedStatement = {
+                metadata,
+                stmtData
+            }
+
+            return parsedData;
+
+        }
+        catch (error: any) {
+            this.parserLogger.error(`[STANDARD STATEMENT] Parsing Error: ${error.message}`, error);
+            throw new FinancialStmtParsingError(
+                `Error parsing financial statement: ${error.message}`,
+                HTTPStatusCodes.InternalServerError
+            );
         }
     }
 
+    /*
+    public parseStatementGEMINI(htmlContent: string): Array<Record<string, string | number>> {
+        this.parserLogger.info(`[STANDARD STATEMENT]: Start parsing`);
+        const data: Array<Record<string, string | number>> = [];
+
+        try {
+            const dom = new JSDOM(htmlContent);
+            const doc = dom.window.document;
+            const table = doc.querySelector('table.report');
+
+            if (!table) {
+                throw new Error('No Statement table found (selector: table.report)');
+            }
+
+            const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll('tr');
+            if (!contentRows || contentRows.length === 0) {
+                throw new Error('No rows found in statement table');
+            }
+
+            let dataStartIdx = 1; // default: data starts at cell index 1
+            let firstHeaderRow = true;
+            let startedDataRows = false;
+
+
+            //Doesn't handle rowspans very well
+            contentRows.forEach((row: HTMLTableRowElement, rowIdx: number) => {
+                const cells: NodeListOf<HTMLTableCellElement> = row.querySelectorAll('td, th');
+
+                // Detect and adjust for header row with colspan
+                if (firstHeaderRow && row.querySelectorAll('th').length > 0) {
+                    const firstCell = cells[0];
+                    const colSpan = firstCell.getAttribute('colspan');
+                    dataStartIdx = colSpan ? parseInt(colSpan, 10) : 1;
+                    firstHeaderRow = false;
+                    return; // skip this header row
+                }
+
+                // 2. Skip rows that are likely just date headers
+
+                const isLikelyDateHeader = Array.from(cells).every(cell => {
+                    const txt = cell.textContent?.trim();
+                    return !txt || /\d{4}/.test(txt);
+                });
+
+                if (isLikelyDateHeader) return;
+
+
+                if (cells.length > dataStartIdx) {
+                    const rawDataTitle = cells[0].textContent;
+                    const standardKey = this.normalizeKey(rawDataTitle);
+
+                    if (standardKey) {
+                        const valueCell = cells[dataStartIdx];
+                        const valueText = valueCell.textContent?.replace(/[$,()]/g, '').trim() || "0";
+                        const numericValue = parseFloat(valueText) * (valueCell.textContent?.includes('(') ? -1 : 1);
+                        const finalValue = isNaN(numericValue) ? 0 : Number(numericValue.toFixed(2));
+
+                        data.push({ [standardKey]: finalValue });
+                    } else if (rawDataTitle?.trim()) {
+                        this.parserLogger.debug(`[STANDARD STATEMENT] Skipping row ${rowIdx + 1} due to unmapped/empty key: "${rawDataTitle}"`);
+                    }
+                }
+            });
+
+            this.parserLogger.info(`[STANDARD STATEMENT]: Parsed ${data.length} data rows.`);
+            return data;
+
+        }
+        catch (error: any) {
+            this.parserLogger.error(`[STANDARD STATEMENT] Parsing Error: ${error.message}`, error);
+            throw new FinancialStmtParsingError(
+                `Error parsing financial statement: ${error.message}`,
+                HTTPStatusCodes.InternalServerError
+            );
+        }
+    }
+
+    public parseStatementOLD(htmlContent: string): Array<Record<string, string | number>> {
+        this.parserLogger.info(`[STANDARD STATEMENT]: Start parsing`);
+        const data: Array<Record<string, string | number>> = [];
+
+        try {
+            const dom = new JSDOM(htmlContent);
+            const doc = dom.window.document;
+            const table = doc.querySelector('table.report');
+
+            if (!table) {
+                throw new Error('No Statement table found (selector: table.report)');
+            }
+
+            const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll('tr');
+            if (!contentRows || contentRows.length === 0) {
+                throw new Error('No rows found in statement table');
+            }
+
+            contentRows.forEach((row: HTMLTableRowElement, rowIdx: number) => {
+                const cells: NodeListOf<HTMLTableCellElement> = row.querySelectorAll('td');
+
+                if (cells.length >= 2) {
+                    const rawDataTitle = cells[0].textContent;
+                    const standardKey = this.normalizeKey(rawDataTitle);
+
+                    if (standardKey) {
+                        const valueCell = cells[1];
+                        const value = valueCell.textContent?.replace(/[$,()]/g, '').trim() || "0";
+                        const numericValue = parseFloat(value) * (valueCell.textContent?.includes('(') ? -1 : 1);
+                        const finalValue = isNaN(numericValue) ? 0 : Number(numericValue.toFixed(2));
+
+                        data.push({ [standardKey]: finalValue });
+                    } else if (rawDataTitle?.trim()) {
+                        this.parserLogger.debug(`[STANDARD STATEMENT] Skipping row ${rowIdx + 1} due to unmapped/empty key: "${rawDataTitle}"`);
+                    }
+                }
+            });
+
+            this.parserLogger.info(`[STANDARD STATEMENT]: Parsed ${data.length} data rows.`);
+            return data;
+        } catch (error: any) {
+            this.parserLogger.error(`[STANDARD STATEMENT] Parsing Error: ${error.message}`, error);
+            throw new FinancialStmtParsingError(
+                `Error parsing financial statement: ${error.message}`,
+                HTTPStatusCodes.InternalServerError
+            );
+        }
+    }
+
+    */
+
 }
 
-let parserInstance1:FinancialStmtParserSvc|null
-export const createFinancialStmtParserSvc1 = (loggingSvc:LoggingService):FinancialStmtParserSvc => {
-    if (!parserInstance) parserInstance = new FinancialStmtParserSvcImpl(loggingSvc);
+// Singleton pattern implementation
+let parserInstance: FinancialStmtParserSvc | null = null;
 
+export const createFinancialStmtParserSvc = (loggingSvc: LoggingService): FinancialStmtParserSvc => {
+    if (!parserInstance) {
+        parserInstance = new FinancialStmtParserSvcImpl(loggingSvc);
+    }
     return parserInstance;
-}
+};
+
+
+/**
+ * 
+ * COLSPAN FIX : USE ONLY IF EQUITY STATEMENT ENCOUNTERS THIS ISSUE
+ * 
+ * let dataStartIdx = 1; // default: data starts at cell index 1
+ * let firstHeaderRow = true;
+
+contentRows.forEach((row: HTMLTableRowElement, rowIdx: number) => {
+    const cells: NodeListOf<HTMLTableCellElement> = row.querySelectorAll('td, th');
+
+    // Detect header row with colspan
+    if (firstHeaderRow && row.querySelectorAll('th').length > 0) {
+        const firstCell = cells[0];
+        const colSpan = firstCell.getAttribute('colspan');
+        dataStartIdx = colSpan ? parseInt(colSpan, 10) : 1;
+        firstHeaderRow = false;
+        return; // skip this header row
+    }
+
+    if (cells.length > dataStartIdx) {
+        const rawDataTitle = cells[0].textContent;
+        const standardKey = this.normalizeKey(rawDataTitle);
+
+        if (standardKey) {
+            const dataItems: number[] = [];
+
+            for (let cellIdx = dataStartIdx; cellIdx < cells.length; cellIdx++) {
+                const cell = cells[cellIdx];
+                const valueText = cell.textContent?.replace(/[$,()]/g, '').trim() || "0";
+                const numericValue = parseFloat(valueText) * (cell.textContent?.includes('(') ? -1 : 1);
+                dataItems.push(isNaN(numericValue) ? 0 : Number(numericValue));
+            }
+
+            filingData.push({ [standardKey]: dataItems });
+        } else if (rawDataTitle?.trim()) {
+            this.parserLogger.debug(`[EQUITY] Skipping row ${rowIdx + 1} due to unmapped/empty key: "${rawDataTitle}"`);
+        }
+    }
+});
+
+ */

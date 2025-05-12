@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEC Statement Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Basic table styling */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1.5rem; /* 24px */
+            font-size: 0.875rem; /* 14px */
+        }
+        th, td {
+            border: 1px solid #e2e8f0; /* cool gray 200 */
+            text-align: left;
+            padding: 0.5rem 0.75rem; /* 8px 12px */
+            vertical-align: top; /* Align content top */
+            word-wrap: break-word; /* Wrap long text */
+            border-top-width: 0;
+            border-left-width: 0;
+        }
+        th:first-child, td:first-child {
+            /* Make first column sticky */
+            position: sticky;
+            left: 0;
+            background-color: #f8fafc; /* cool gray 50 - match container */
+            z-index: 1;
+            border-right: 2px solid #d1d5db; /* gray 300 */
+            width: 300px; /* Fixed width for item column */
+            min-width: 250px;
+            white-space: normal; /* Allow item names to wrap */
+            font-weight: 500;
+        }
+        th {
+            background-color: #f1f5f9; /* cool gray 100 */
+            font-weight: bold;
+            /* Make header row sticky */
+            position: sticky;
+            top: 0;
+            z-index: 2; /* Above sticky column */
+            white-space: normal; /* Allow header text to wrap */
+            font-size: 0.8rem; /* Slightly smaller header text */
+            padding: 0.4rem 0.5rem; /* Adjust padding */
+        }
+         /* Ensure top-left cell is styled correctly */
+        thead th:first-child {
+             z-index: 3;
+             background-color: #e2e8f0; /* Slightly darker sticky corner */
+             font-size: 0.875rem; /* Reset font size */
+             padding: 0.5rem 0.75rem; /* Reset padding */
+        }
+         td:not(:first-child) {
+             text-align: right;
+             white-space: nowrap; /* Keep numbers on one line */
+         }
+        /* Style for multi-value equity arrays */
+        .equity-values span {
+            display: block; /* Display each value on new line */
+            margin-bottom: 0.1em;
+            font-size: 0.9em;
+            text-align: right;
+        }
+        /* Simple loading indicator */
+        #loadingIndicator.hidden {
+            display: none;
+        }
+        /* Add some spacing below the form */
+        #fetchForm { /* Use the actual form ID */
+            margin-bottom: 1.5rem; /* 24px */
+        }
+        /* Hide error/status area initially */
+        #errorArea.hidden, #statusArea.hidden {
+            display: none;
+        }
+        /* Container for horizontal scrolling */
+        .table-scroll-container { /* This class will be added by JS */
+            overflow-x: auto;
+            margin-top: 1rem;
+            border: 1px solid #e2e8f0; /* cool gray 200 */
+            border-radius: 0.375rem; /* 6px */
+            background-color: #f8fafc; /* cool gray 50 */
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); /* Shadow */
+        }
+         /* Container for the whole page content */
+         .main-container {
+             max-width: 80rem; /* Allow wider content */
+         }
+         /* Link styling */
+         th a {
+             color: #4f46e5; /* indigo-600 */
+             text-decoration: none;
+         }
+         th a:hover {
+             text-decoration: underline;
+             color: #3730a3; /* indigo-800 */
+         }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans p-4 md:p-8">
+
+    <div class="main-container container mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-4 text-gray-800">SEC Statement Viewer</h1>
+
+        <form id="fetchForm" class="mb-6 space-y-4">
+             <div>
+                <label for="tickerInput" class="block text-sm font-medium text-gray-700">Ticker Symbol:</label>
+                <input type="text" id="tickerInput" name="ticker" required
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                       placeholder="e.g., NVDA, AAPL" value="AMD">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                 <div>
+                    <label for="statementTypeInput" class="block text-sm font-medium text-gray-700">Statement Type:</label>
+                    <select id="statementTypeInput" name="type"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">All Types</option>
+                        <option value="INCOME" selected>Income</option>
+                        <option value="BALANCE">Balance Sheet</option>
+                        <option value="CASHFLOW">Cash Flow</option>
+                        <option value="EQUITY">Equity (May render differently)</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="formTypeInput" class="block text-sm font-medium text-gray-700">Form Type:</label>
+                    <select id="formTypeInput" name="formType"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">Both (10-K & 10-Q)</option>
+                        <option value="10-K" selected>10-K Only</option>
+                        <option value="10-Q">10-Q Only</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="limitInput" class="block text-sm font-medium text-gray-700">Periods (Limit):</label>
+                    <input type="number" id="limitInput" name="limit" value="10" min="1" max="50"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="sortInput" class="block text-sm font-medium text-gray-700">Sort Periods:</label>
+                    <select id="sortInput" name="sort"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="desc" selected>Newest First</option>
+                        <option value="asc">Oldest First</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit"
+                    class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Fetch Statements
+            </button>
+        </form>
+        <div id="loadingIndicator" class="hidden text-center my-4 text-gray-600">
+             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+             </svg>
+             Loading...
+         </div>
+
+        <div id="statusArea" class="hidden mt-4 text-blue-600 font-medium p-3 bg-blue-100 border border-blue-400 rounded-md"></div>
+
+        <div id="errorArea" class="hidden mt-4 text-red-600 font-medium p-3 bg-red-100 border border-red-400 rounded-md"></div>
+
+        <div id="resultsArea" class="mt-6">
+            </div>
+
+    </div>
+
+    <script>
+        console.log("SCRIPT START: Attaching listeners and defining functions...");
+
+        // Get references to elements
+        const fetchForm = document.getElementById('fetchForm');
+        const resultsArea = document.getElementById('resultsArea');
+        const errorArea = document.getElementById('errorArea');
+        const statusArea = document.getElementById('statusArea');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const API_BASE_URL = 'http://localhost:3000/api/v1'; // Use full URL for clarity
+
+        // --- fetchData function ---
+        async function fetchData(apiUrl) {
+            logMessage(`Inside fetchData: Fetching ${apiUrl}`);
+            try {
+                const response = await fetch(apiUrl);
+                logMessage(`Inside fetchData: Status ${response.status}`);
+                const contentType = response.headers.get('content-type');
+                if (!response.ok) {
+                    let errorMsg = `HTTP error! Status: ${response.status}`;
+                    if (contentType?.includes('application/json')) {
+                        try { const errorResult = await response.json(); errorMsg = errorResult.messageTxt || errorResult.details || `Server error ${response.status}`; } catch (e) {}
+                    } else {
+                        try { const textError = await response.text(); errorMsg += ` - Response: ${textError.substring(0, 150)}...`; } catch {}
+                    }
+                    throw new Error(errorMsg);
+                }
+                if (contentType?.includes('application/json')) {
+                    const result = await response.json();
+                    logMessage(`Inside fetchData: Parsed JSON`, result);
+                    if (result && result.success && Array.isArray(result.data)) {
+                        return result.data;
+                    } else if (result && result.statusCode === 404) {
+                        return [];
+                    }
+                     else {
+                        throw new Error(result.messageTxt || 'API returned data in unexpected structure.');
+                    }
+                } else { const text = await response.text(); throw new Error(`Unexpected content type: ${contentType}. Response: ${text.substring(0,150)}...`); }
+            } catch (error) { logMessage(`Inside fetchData: Error`, error); throw error; }
+        }
+        // -----------------------------
+
+        // Event listener for the fetch form
+        if (fetchForm) {
+             fetchForm.addEventListener('submit', async (event) => {
+                console.log("EVENT LISTENER: Submit event triggered.");
+                event.preventDefault();
+                clearResults();
+                showLoading(true);
+
+                const formData = new FormData(fetchForm);
+                const ticker = formData.get('ticker')?.trim().toUpperCase();
+                const type = formData.get('type');
+                const formType = formData.get('formType');
+                const limit = formData.get('limit');
+                const sort = formData.get('sort');
+                if (!ticker) { showError('Ticker required.'); showLoading(false); return; }
+
+                const queryParams = new URLSearchParams();
+                if (type) queryParams.append('type', type);
+                if (formType) queryParams.append('formType', formType);
+                if (limit) queryParams.append('limit', limit);
+                if (sort) queryParams.append('sort', sort);
+
+                const apiUrl = `${API_BASE_URL}/statements/${ticker}?${queryParams.toString()}`;
+                logMessage(`Constructed API URL: ${apiUrl}`);
+
+                try {
+                    const fetchedDataArray = await fetchData(apiUrl);
+                    logMessage(`Data received from fetchData: ${fetchedDataArray?.length} items`);
+
+                    if (Array.isArray(fetchedDataArray)) {
+                        if (fetchedDataArray.length > 0) {
+                            console.log(">>> BEFORE calling transformJSON <<<");
+                            const tableElement = transformJSON(fetchedDataArray);
+                            resultsArea.appendChild(tableElement);
+                            console.log("<<< AFTER calling transformJSON and appending table >>>");
+                            showStatus(`Successfully displayed ${fetchedDataArray.length} statements.`);
+                        } else {
+                            showInfo(`No statements found matching the criteria.`);
+                        }
+                    } else {
+                         console.error("EVENT LISTENER: fetchedDataArray is not an array!", fetchedDataArray);
+                         showError('Received invalid data format from fetch operation.');
+                    }
+                } catch (error) {
+                    logMessage(`Error during fetch/display process:`, error);
+                    showError(`Failed to get or display data: ${error.message}`);
+                } finally {
+                    showLoading(false);
+                }
+            });
+             console.log("SCRIPT STATUS: Form event listener attached.");
+        } else {
+              console.error("SCRIPT ERROR: Could not find fetchForm element!");
+        }
+
+        // --- User's transformJSON function (with modifications) ---
+        const transformJSON = (data) => {
+            logMessage("transformJSON: Starting with data:", data);
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                console.error("transformJSON: Invalid or empty data array provided.");
+                const p = document.createElement('p'); p.textContent = 'No data to display.'; return p;
+            }
+
+            const mapOfMasterKeys = new Map(); // Stores all unique line item keys
+            // Map to store data for each column: Map<uniqueColumnKey, Map<lineItemKey, value>>
+            const columnValueMaps = new Map();
+            // Array to store data for column headers and sorting
+            const columnHeaderData = [];
+
+            const tbl = document.createElement("table");
+            tbl.setAttribute('id', `${data[0].statementType?.toLowerCase() || 'statement'}`);
+            tbl.setAttribute('class', 'table-auto w-full'); // Using Tailwind classes
+
+            const tHead = document.createElement("thead");
+            const tBody = document.createElement("tbody");
+            tbl.appendChild(tHead); // Append thead first
+            tbl.appendChild(tBody); // Then tbody
+
+            const headerRow = tHead.insertRow(); // Use insertRow on thead
+            const headerTitleCell = document.createElement('th');
+            headerTitleCell.innerHTML = `${data[0].statementType?.toUpperCase() || 'STATEMENT'}`;
+            headerTitleCell.setAttribute('class', 'sticky left-0 bg-gray-200 z-10 border-r-2');
+            headerRow.appendChild(headerTitleCell);
+
+            // --- PASS 1: Collect all unique line item keys and prepare column data ---
+            data.forEach((stmt) => {
+                if (!stmt || !stmt.filingDate || !stmt.sourceFile || !stmt.formType || !stmt.cik || !stmt.accessionNumber) {
+                    logMessage("transformJSON Pass 1: Skipping statement due to missing fields", stmt);
+                    return;
+                }
+                // Unique key for each column to handle multiple files for the same date/form
+                const columnKey = `${new Date(stmt.filingDate).toISOString()}_${stmt.formType}_${stmt.sourceFile}`;
+
+                if (!columnValueMaps.has(columnKey)) {
+                    columnHeaderData.push({
+                        key: columnKey,
+                        display: `${formatDate(stmt.filingDate)} (${stmt.formType} ${stmt.sourceFile})`,
+                        date: new Date(stmt.filingDate),
+                        sourceFile: stmt.sourceFile, // For secondary sort
+                        cik: stmt.cik,
+                        accessionNumber: stmt.accessionNumber.replace(/-/g, ''), // Unhyphenated
+                        originalSourceFile: stmt.sourceFile // Keep original for link
+                    });
+                    columnValueMaps.set(columnKey, new Map());
+                }
+
+                const currentParsedData = Array.isArray(stmt.parsedData) ? stmt.parsedData : stmt.parsedData?.stmtData;
+                if (Array.isArray(currentParsedData)) {
+                    currentParsedData.forEach((entry) => {
+                        if (typeof entry === 'object' && entry !== null) {
+                            const itemKey = Object.keys(entry)[0];
+                            const itemValue = entry[itemKey];
+                            if (itemKey && !mapOfMasterKeys.has(itemKey)) {
+                                mapOfMasterKeys.set(itemKey, true); // Just mark presence
+                            }
+                            // Store value for this specific column and item
+                            columnValueMaps.get(columnKey).set(itemKey, itemValue);
+                        }
+                    });
+                }
+            });
+
+            // Sort columns: Newest first, then by sourceFile
+            columnHeaderData.sort((a, b) => {
+                const dateDiff = b.date.getTime() - a.date.getTime();
+                if (dateDiff !== 0) return dateDiff;
+                return (a.sourceFile || '').localeCompare(b.sourceFile || '');
+            });
+
+            // Create header cells from sorted column data
+            columnHeaderData.forEach(colData => {
+                const headerCell = document.createElement('th');
+                headerCell.setAttribute('class', 'text-nowrap');
+                const stmtURI = document.createElement('a');
+                stmtURI.setAttribute('href', `https://www.sec.gov/Archives/edgar/data/${colData.cik}/${colData.accessionNumber}/${colData.originalSourceFile}`);
+                stmtURI.setAttribute('target', `_blank`);
+                stmtURI.setAttribute('rel', 'noopener noreferrer');
+                stmtURI.innerHTML = colData.display.replace(/ \(/, '<br>(');
+                headerCell.appendChild(stmtURI);
+                headerRow.appendChild(headerCell);
+            });
+            logMessage("transformJSON: Header row created with links.");
+
+            // --- PASS 2: Populate data cells ---
+            const orderedMasterKeys = Array.from(mapOfMasterKeys.keys());
+            orderedMasterKeys.forEach((rowLabel) => {
+                 if (typeof rowLabel === 'string' && rowLabel.trim().endsWith(':')) {
+                     logMessage(`Skipping rendering row for header: ${rowLabel}`);
+                     return;
+                 }
+                const tblrow = tBody.insertRow();
+                tblrow.insertCell().textContent = rowLabel;
+
+                columnHeaderData.forEach(colData => { // Iterate through sorted columns
+                    const cell = tblrow.insertCell();
+                    const itemsForColumn = columnValueMaps.get(colData.key);
+                    const value = itemsForColumn?.get(rowLabel);
+
+                    if (value !== undefined && value !== null) {
+                         if (Array.isArray(value)) { // Handle equity arrays
+                             cell.classList.add('equity-values');
+                             value.forEach(val => {
+                                 const span = document.createElement('span');
+                                 span.textContent = formatNumber(val);
+                                 cell.appendChild(span);
+                             });
+                         } else {
+                             cell.textContent = formatNumber(value);
+                         }
+                     } else {
+                         cell.textContent = '-';
+                     }
+                });
+            });
+            logMessage(`transformJSON: Table body created with ${orderedMasterKeys.length} rows.`);
+
+            const container = document.createElement('div');
+            container.classList.add('table-scroll-container');
+            container.appendChild(tbl);
+            return container;
+        };
+
+         // --- Helper Functions ---
+         function clearResults() { resultsArea.innerHTML = ''; errorArea.textContent = ''; errorArea.classList.add('hidden'); statusArea.textContent = ''; statusArea.classList.add('hidden'); }
+         function showError(message) { errorArea.textContent = message; errorArea.classList.remove('hidden'); statusArea.classList.add('hidden'); }
+         function showInfo(message) { resultsArea.innerHTML = `<p class="text-center text-gray-500 py-4">${message}</p>`; statusArea.classList.add('hidden'); errorArea.classList.add('hidden');}
+         function showStatus(message) { statusArea.textContent = message; statusArea.classList.remove('hidden'); errorArea.classList.add('hidden'); }
+         function showLoading(isLoading) { loadingIndicator.classList.toggle('hidden', !isLoading); }
+         function formatDate(dateString) { if (!dateString) return 'N/A'; try { const d=new Date(dateString); return isNaN(d.getTime())?dateString:d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'}); } catch(e){ return dateString; } }
+         function formatNumber(value) { if(typeof value === 'number'){ return value.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); } if(value===null||value===undefined) return 'N/A'; const n=parseFloat(String(value).replace(/,/g,'')); return isNaN(n)?String(value):n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+         function logMessage(message, data = null) { console.log(message, data !== null ? JSON.stringify(data, null, 2) : ''); }
+
+         console.log("SCRIPT END: Functions defined, listener attached (if form found).");
+
+    </script>
+
+</body>
+</html>

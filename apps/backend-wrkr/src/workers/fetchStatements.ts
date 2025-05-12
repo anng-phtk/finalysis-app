@@ -10,10 +10,12 @@ import {
     FinancialStmtParserSvc,
     EquityStatement,
     FinancialStatement,
+    ParsedStatement,
     StatementDao,
     StatementDoc,
     SECOperationError,
-    DiskCacheFailureCodes
+    DiskCacheFailureCodes,
+    FinancialStmtMetadata
 } from "@finalysis-app/shared-utils";
 
 
@@ -46,7 +48,6 @@ export const wrkrFetchStatments = async (
             catch (parseError) {
                 wrkrLogger.error(`Failed to parse job payload. Skipping job.payload: ${result}, error: ${parseError}`);
                 return false;
-                
                 // TODO: Potentially move to a failed queue?
                 //throw new DiskCacheError("No jobs found", DiskCacheFailureCodes.NothingToFetch);
             }
@@ -61,6 +62,11 @@ export const wrkrFetchStatments = async (
             for (let [stmt, stmtFiles] of Object.entries(filingsDTO.filingDocs)) {
                 wrkrLogger.debug(`Processing statement type: ${stmt}`);
                 
+                if (stmt === 'other') {
+                    // capture the html link to this file.
+                    wrkrLogger.debug(`TODO: make a doc to save the links of these files: ${stmtFiles}`)    
+                }
+
                 if (!Array.isArray(stmtFiles)) {
                     wrkrLogger.warn(`Expected array for stmtFiles but got ${typeof stmtFiles}. Skipping type: ${stmt}`, { jobId: filingsDTO.jobId });
                     throw new SECOperationError(`Expected to find stmtFiles but got ${typeof stmtFiles}`, HTTPStatusCodes.ExpectationFailed, "Content was not in HTML/String format");
@@ -86,16 +92,23 @@ export const wrkrFetchStatments = async (
                     }
 
                     let filing:FilingDataConfig = filingsDTO as FilingDataConfig;
-                    let parsedData:any;
+                    let parsedData:ParsedStatement;
                     
                     //parse html and transform to JSON
                     if (stmt === 'equity') {
-                        parsedData = (filing as EquityStatement).filingData = stmtParserSvc.parseEquityStatement(htmlDoc);
+                        parsedData = stmtParserSvc.parseEquityStatement(htmlDoc);
                         (filing as EquityStatement).stmtType = stmt;
+                        (filing as EquityStatement).metadata = (parsedData.metadata) as FinancialStmtMetadata
+                        (filing as EquityStatement).filingData = parsedData.equityData;
+                        
+                        
                     }
                     else {
-                        parsedData = (filing as FinancialStatement).filingData = stmtParserSvc.parseStatement(htmlDoc);
+                        parsedData = stmtParserSvc.parseStatement(htmlDoc);
                         (filing as FinancialStatement).stmtType = stmt;
+                        (filing as FinancialStatement).metadata = (parsedData.metadata) as FinancialStmtMetadata
+                        (filing as FinancialStatement).filingData = parsedData.stmtData
+                        
                     }
 
                 

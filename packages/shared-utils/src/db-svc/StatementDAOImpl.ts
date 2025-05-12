@@ -125,6 +125,7 @@ export class StatementDaoImpl implements StatementDao {
 
         if (formType) {
             filter.formType = formType; // either 10-K or 10-Q
+            //filter.accessionNumber = '000104581017000027';
         }
         const sort: Sort = { filingDate: sortOrder };
 
@@ -136,6 +137,7 @@ export class StatementDaoImpl implements StatementDao {
                 .limit(limit)
                 .toArray();
             this.log.info(`Found ${documents.length} statements for ticker ${ticker}`, { filter, limit });
+        
             return documents;
         } catch (error: any) {
             this.log.error(`Error finding statements by ticker ${ticker}, ${ filter}, ${error }`);

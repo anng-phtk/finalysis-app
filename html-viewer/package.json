@@ -1,0 +1,19 @@
+{
+  "name": "@finalysis-app/html-viewer",
+  "version": "1.0.0",
+  "description": "Basic UI to view and format JSON financial statements to HTML.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anng-phtk/finalysis-app.git"
+  },
+  "author": "Anang Phatak",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/anng-phtk/finalysis-app/issues"
+  },
+  "homepage": "https://github.com/anng-phtk/finalysis-app#readme"
+}

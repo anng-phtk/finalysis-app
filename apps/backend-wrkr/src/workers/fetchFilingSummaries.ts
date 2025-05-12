@@ -48,11 +48,11 @@ export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc
             */
             const xmlSummaries = await cacheSvc.getFileFromCache(filingSummaryOptions);
             if (!xmlSummaries) {
-                throw new SECOperationError(`No JSON data for ${filingsDTO.ticker}. 
+                throw new SECOperationError(`No JSON data for ${filingsDTO.ticker}. ${filingsDTO.accession}
                 Check if data is available at ${filingsDTO.fileURL} `,
                     HTTPStatusCodes.BadRequest, 'BadTickerOrCIK');
             }
-            const docs:Record<string, string[]> = await wrkrParseXMLSummries(xmlSummaries, wrkrLogger);
+            const docs:Record<string, string[]> = await wrkrParseXMLSummries(xmlSummaries, filingsDTO.accession, wrkrLogger);
 
             const filingData:FilingDataConfig = filingsDTO as FilingDataConfig; 
             filingData.filingDocs = docs;
@@ -103,20 +103,28 @@ export const wrkrFetchFilingSummaries = async (redisJobs: RedisJobsSvc, cacheSvc
     }
 }
 
-const wrkrParseXMLSummries = async (xmlFile:string, wrkrLogger:Log):Promise<Record<string, string[]>> => {
+const wrkrParseXMLSummries = async (xmlFile:string, accession:string, wrkrLogger:Log):Promise<Record<string, string[]>> => {
     const summaryData = await parseStringPromise(xmlFile, { explicitArray: false });
     const reports = summaryData.FilingSummary.MyReports.Report;
     const docMap: { [key: string]: string[] } = {
         income: [], // Array for all income statements
         balance: [], // Array for all balance sheets
         equity: [], // Array for all equity statements
-        cashflow: [] // Array for all cash flow statements
+        cashflow: [], // Array for all cash flow statements
+        other:[]    // all other statements
     };
     const unmappedStatements: string[] = [];
+
+    
+       
     try {
         const filteredReports = reports.filter((report: any) => {
             const menuCat = report.MenuCategory?.toLowerCase() || '';
-            return menuCat.includes('statements');
+            const shortName = report.ShortName?.toLowerCase() || ''
+            const isValidMenuCat:boolean = menuCat.includes('statements'); //|| menuCat.includes('uncategorized');
+            
+            return isValidMenuCat;
+        
         });
 
         filteredReports.forEach((report: any) => {
@@ -139,7 +147,9 @@ const wrkrParseXMLSummries = async (xmlFile:string, wrkrLogger:Log):Promise<Reco
                 docMap.equity.push(htmlFile);
                 wrkrLogger.debug(`[XML2JS]: ${name}`);
             } else {
-                unmappedStatements.push(`${name} (${htmlFile})`);
+                //const fullURL = `https://www.sec.gov/Archives/edgar/data/${filingsDTO.cik}/${filingsDTO.accession}/${htmlFile}`;
+                docMap.other.push(htmlFile);
+                unmappedStatements.push(`${name} (${htmlFile}")`);
             }
         });
 
@@ -147,10 +157,10 @@ const wrkrParseXMLSummries = async (xmlFile:string, wrkrLogger:Log):Promise<Reco
             wrkrLogger.warn(`Unmapped financial statements detected',data: ${unmappedStatements}`)
         }
         
-        wrkrLogger.debug(`Found docments: ${JSON.stringify(docMap)}`);
+        wrkrLogger.debug(`Found docments: ${accession} \n ${JSON.stringify(docMap)}`);
         return docMap;
-
-    } catch (error) {
+    }
+    catch (error) {
         wrkrLogger.error(`Error parsing XML summary', ${ error}`);
         throw error;
     }
