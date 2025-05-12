@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <title>SEC Statement Viewer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://jeffreymaniac.github.io/OpenDyslexic-font-for-css/opendyslexic.css" />
+
+  <style>
+
+  </style>
+</head>
+
+<body class="container-fluid fs-6" style="font-family: sans-serif; font-size:0.9rem;">
+
+  <div>
+    <h1>SEC Statement Viewer</h1>
+
+    <div id="formContainer" class="container py-5">
+      <!--
+    const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+    const type = document.getElementById('statementTypeInput').value;
+    const formType = document.getElementById('formTypeInput').value;
+    const limit = document.getElementById('limitInput').value;
+    -->
+      <form id="stmtForm">
+        <div class="row justify-content-top p-2">
+          <div class="col input-group">
+              <div class="input-group-prepend">
+                <span class="input-group-text">Ticker:</span>
+              </div>
+              <input type="text" id="tickerInput" name="ticker" class="form-control" required="true" placeholder="e.g., NVDA, AAPL" value="AMD" />
+          </div>
+        </div>
+
+        <div class="row justify-content-top px-2">
+          <div class="col-3 input-group">
+            
+            <div class="input-group-prepend">
+              <span class="input-group-text">Statement:</span>
+            </div>
+            <select id="statementTypeInput" name="type" class="form-control">
+              <option value="">All Types</option>
+              <option value="INCOME">Income</option>
+              <option value="BALANCE" selected>Balance Sheet</option>
+              <option value="CASHFLOW">Cash Flow</option>
+              <option value="EQUITY">Equity</option>
+            </select>
+          </div>
+
+          <div class="col-3 input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">Form Type:</span>
+            </div>
+            <select id="formTypeInput" name="formType" class="form-control">
+              <option value="">Both</option>
+              <option value="10-K" selected>10-K</option>
+              <option value="10-Q">10-Q</option>
+            </select>
+          </div>
+        
+          <div class="col-3 input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">Periods (Limit):</span>
+            </div>
+            <input type="number" id="limitInput" name="limit" value="10" min="1" max="50" class="form-control">
+            <!--
+              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            -->
+          </div>
+
+          <div class="col-3 input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text">Order:</span>
+            </div>
+            <select id="sortInput" name="sort" class="select" class="form-control">
+              <option value="desc" selected>Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="row justify-content-center p-2">
+          <button type="submit" class="btn btn-primary col justify-content-center ml-2 mr-2">Fetch Statements</button>
+        </div>
+      </form>
+    </div>
+    <div id="stmtContainer" class="table-responsive-sm">
+
+    </div>
+
+
+  </div>
+  <script>
+
+    const transformJSON = (data) => {
+      const mapOfMasterKeys = new Map();
+      const mergeHelper = new Map();
+      const filingDates = [];
+
+      const tbl = document.createElement("table");
+      tbl.setAttribute('id', `${data[0].statementType}`);
+      tbl.setAttribute('class', 'table table-striped table-bordered');
+
+      const tHead = document.createElement("thead"); tHead.setAttribute('class', 'thead thead-light');
+      const tBody = document.createElement("tbody");
+
+
+      const headerTitleCell = document.createElement('th');
+
+      headerTitleCell.innerHTML = `${data[0].statementType}`;
+      headerTitleCell.setAttribute('class', '');
+
+      const headerRow = document.createElement('tr');
+      headerRow.appendChild(headerTitleCell);
+
+      // Normalize dates to 'YYYY-MM-DD' for consistent indexing
+      // create headers for showing this document
+      data.forEach((stmt, idx) => {
+        const filingKey = new Date(stmt.filingDate).toISOString().split('T')[0];
+        //const filingKey = `${new Date(stmt.filingDate).toISOString().split('T')[0]} - ${stmt.sourceFile}`;
+
+        if (!mergeHelper.has(filingKey)) {
+          mergeHelper.set(filingKey, mergeHelper.size); // assign next column index
+
+          filingDates.push(filingKey);
+
+          const headerCell = document.createElement('th');
+          headerCell.setAttribute('class', 'text-nowrap');
+
+          const stmtURI = document.createElement('a');
+          stmtURI.setAttribute('href', `https://www.sec.gov/Archives/edgar/data/${stmt.cik}/${stmt.accessionNumber}/${stmt.sourceFile}`);
+          stmtURI.setAttribute('target', `_blank`);
+          stmtURI.innerText = `${filingKey}`;
+
+          headerCell.appendChild(stmtURI);
+          headerRow.appendChild(headerCell);
+        }
+      });
+
+      // Collect all unique keys and initialize rows
+      data.forEach((stmt) => {
+        const filingKey = new Date(stmt.filingDate).toISOString().split('T')[0];
+        const colIdx = mergeHelper.get(filingKey);
+        console.log(stmt);
+
+        stmt.parsedData.stmtData.forEach((entry) => {
+          const key = Object.keys(entry)[0];
+          const val = entry[key];
+
+          if (!mapOfMasterKeys.has(key)) {
+            mapOfMasterKeys.set(key, new Array(mergeHelper.size).fill(null));
+          }
+          mapOfMasterKeys.get(key)[colIdx] = val;
+        });
+      });
+
+
+      // setup html table
+      tHead.appendChild(headerRow);
+      tbl.appendChild(tHead);
+
+      const tableRows = [];
+      mapOfMasterKeys.forEach((cols, rowLabel, map) => {
+        const tblrow = document.createElement("tr");
+
+
+
+        const headercell = document.createElement("td");
+        headercell.innerHTML = rowLabel
+        tblrow.appendChild(headercell);
+
+        const row = { rowLabel };
+
+        filingDates.forEach((date, idx) => {
+          row[date] = cols[idx];
+          const cell = document.createElement("td");
+          cell.innerHTML = cols[idx];
+          tblrow.appendChild(cell);
+        });
+
+        tableRows.push(row);
+        tBody.appendChild(tblrow);
+      });
+
+      tbl.appendChild(tBody);
+
+      console.table(tableRows);
+      return tbl;
+
+    };
+
+
+
+    const transformJSONGEMINI = (data) => {
+      console.log("transformJSON: Starting with data:", data);
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        console.error("transformJSON: Invalid or empty data array provided.");
+        return document.createElement('p').appendChild(document.createTextNode('No data to display.'));
+      }
+
+      const statementType = data[0]?.statementType?.toUpperCase() || 'Unknown'; // Get type from first entry
+      const masterKeys = new Map(); // Map<lineItemKey, true> - To get unique keys in order
+      const statementDataMap = new Map(); // Map<columnKey, Map<lineItemKey, value>>
+      const columnKeysSet = new Set(); // To get unique column keys
+
+      // --- PASS 1: Collect all unique keys and map data by column ---
+      console.log("transformJSON: Starting Pass 1...");
+      data.forEach((stmt, stmtIndex) => {
+        if (!stmt || !Array.isArray(stmt.parsedData) || !stmt.filingDate || !stmt.formType || !stmt.sourceFile) {
+          console.warn(`Skipping statement ${stmtIndex} in Pass 1 due to missing fields.`);
+          return;
+        }
+        // Create a unique key for the column header (Date + Form + Source)
+        const columnKey = `${formatDate(stmt.filingDate)} (${stmt.formType} ${stmt.sourceFile})`;
+        columnKeysSet.add(columnKey);
+
+        const itemMap = new Map(); // Map<lineItemKey, value> for THIS statement
+        stmt.parsedData.forEach((item, itemIndex) => {
+          if (typeof item !== 'object' || item === null || Object.keys(item).length === 0) {
+            console.warn(`Skipping invalid item at index ${itemIndex} in statement ${stmtIndex}`);
+            return;
+          }
+          const key = Object.keys(item)[0];
+          const value = item[key];
+
+          // Add to master list if new
+          if (!masterKeys.has(key)) {
+            masterKeys.set(key, true);
+          }
+          // Add item to this statement's map
+          itemMap.set(key, value);
+        });
+
+        // Store this statement's map using the unique column key
+        if (itemMap.size > 0) {
+          statementDataMap.set(columnKey, itemMap);
+        }
+      });
+
+      const orderedMasterKeys = Array.from(masterKeys.keys());
+      // Sort column keys robustly by date, then source file
+      const orderedColumnKeys = Array.from(columnKeysSet).sort((a, b) => {
+        try {
+          const matchA = a.match(/^(.*?) \((.*?) (.*?)\)$/);
+          const matchB = b.match(/^(.*?) \((.*?) (.*?)\)$/);
+          if (!matchA || !matchB) return 0;
+          const dateA = new Date(matchA[1]).getTime();
+          const dateB = new Date(matchB[1]).getTime();
+          if (isNaN(dateA) || isNaN(dateB)) return 0;
+          if (dateB !== dateA) return dateB - dateA; // Desc date
+          return (matchA[3] || '').localeCompare(matchB[3] || ''); // Asc sourceFile
+        } catch { return 0; }
+      });
+
+      console.log(`transformJSON: Pass 1 Complete. Master Keys: ${orderedMasterKeys.length}, Columns: ${orderedColumnKeys.length}`);
+      if (orderedMasterKeys.length === 0 || orderedColumnKeys.length === 0) {
+        console.error("transformJSON: No valid keys or columns found.");
+        return document.createElement('p').appendChild(document.createTextNode('Could not generate table structure.'));
+      }
+
+      // --- PASS 2: Build HTML Table ---
+      console.log("transformJSON: Starting Pass 2...");
+      const tbl = document.createElement("table");
+      tbl.setAttribute('id', `${statementType.toLowerCase()}-table`); // Use lowercase type for ID
+      tbl.setAttribute('style', 'border:1px solid #efefef;'); // Basic style
+
+      const headerRow = tbl.createTHead().insertRow();
+      headerRow.insertCell().outerHTML = '<th>Item</th>'; // Header for item column
+      orderedColumnKeys.forEach(colKey => {
+        const headerText = colKey.replace(/ \(/, '<br>('); // Nicer header format
+        headerRow.insertCell().outerHTML = `<th>${headerText}</th>`;
+      });
+      console.log("transformJSON: Header row created.");
+
+      const tbody = tbl.createTBody();
+      orderedMasterKeys.forEach((key) => {
+        // Skip rendering header-like rows based on colon
+        if (typeof key === 'string' && key.trim().endsWith(':')) {
+          console.log(`Skipping rendering row for header: ${key}`);
+          return;
+        }
+
+        const tblrow = tbody.insertRow();
+        tblrow.setAttribute('style', 'border:1px solid #000; background-color:#ffffff;'); // Basic style
+        tblrow.insertCell().textContent = key; // Item name cell
+
+        orderedColumnKeys.forEach(colKey => {
+          const cell = tblrow.insertCell();
+          cell.setAttribute('style', 'text-align:right; white-space:nowrap;'); // Style value cells
+          const itemsForDate = statementDataMap.get(colKey);
+          const value = itemsForDate?.get(key); // Lookup value
+
+          if (value !== undefined && value !== null) {
+            if (Array.isArray(value)) { // Handle equity arrays
+              cell.innerHTML = value.map(v => `<span>${formatNumberSimple(v)}</span>`).join('<br>');
+            } else {
+              cell.textContent = formatNumberSimple(value);
+            }
+          } else {
+            cell.textContent = '-'; // Placeholder for missing data
+          }
+        });
+      });
+      console.log(`transformJSON: Table body created with ${tbody.rows.length} rows.`);
+
+      // Add a caption for context
+      const caption = tbl.createCaption();
+      caption.textContent = `${statementType.replace(/_/g, ' ')} STATEMENTS`;
+      caption.style.fontWeight = 'bold';
+      caption.style.fontSize = '1.1em';
+      caption.style.padding = '0.5em';
+      caption.style.textAlign = 'left';
+
+      console.log("transformJSON: Table built successfully.");
+      return tbl; // Return the generated table element
+    };
+
+    // --- Helper Functions ---
+    function formatNumberSimple(value) { /* ... (same as before) ... */ }
+    function formatDate(dateString) { /* ... (same as before) ... */ }
+
+    // Definition of helper functions (copied from previous version for completeness)
+    function formatNumberSimple(value) {
+      if (typeof value === 'number') {
+        return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
+      if (value === null || value === undefined) return 'N/A';
+      const cleanedValue = String(value).replace(/,/g, '');
+      const num = parseFloat(cleanedValue);
+      if (!isNaN(num)) {
+        return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
+      return String(value);
+    }
+    function formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC'
+        });
+      } catch (e) { return dateString; }
+    }
+
+
+    document.addEventListener('DOMContentLoaded', async (evt) => {
+      const form = document.getElementById('stmtForm');
+
+      form.addEventListener('submit', async (evt) => {
+        evt.preventDefault();
+
+        const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+        const type = document.getElementById('statementTypeInput').value;
+        const formType = document.getElementById('formTypeInput').value;
+        const limit = document.getElementById('limitInput').value;
+        const url = `http://localhost:3000/api/v1/statements/${ticker}?type=${type}&limit=${limit}&sortParam=desc&formType=${formType}`;
+
+        const response = await fetch(url);
+        const responseData = await response.json();
+        const stmtData = responseData.data;
+
+        const container = document.getElementById('stmtContainer');
+        container.innerHTML = ''; // Clear old data
+        container.appendChild(transformJSON(stmtData));
+      });
+    });
+  </script>
+
+
+  <!-- Bootstrap loaders -->
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
+</body>
+
+</html>

@@ -67,7 +67,6 @@ class LoggingServiceImpl implements LoggingService {
                 //websocket: { appenders: appendersList, level: 'debug' }
             }
         }
-
         // Configure log4js with the composed configuration
         Log4jsMethods.configure(composedConfig);
     }
