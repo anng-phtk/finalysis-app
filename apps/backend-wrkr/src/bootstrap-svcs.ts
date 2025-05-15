@@ -14,7 +14,7 @@ export const bootstrapApiServices = async () => {
     const loggingOptions: LoggingServiceConfigOptions = {
         env: 'dev',
         type: 'both',
-        level: 'debug',
+        level: 'error',
         maxLogSize: 10000,
         backups: 2,
         compress: true

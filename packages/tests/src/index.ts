@@ -5,161 +5,129 @@ import path from 'path';
 
 
 async function testHTMLParsing(htmlContent: string): Promise<void> {
-    const dom:JSDOM = new JSDOM(htmlContent);
-    const doc:Document = dom.window.document;
-    
-    
+    const dom: JSDOM = new JSDOM(htmlContent);
+    const doc: Document = dom.window.document;
+
+
     const data: Array<Record<string, string | number>> = [];
     // ------------------------------------------
     // start setup
 
     let metadata = {
-        currency:'',
-        units:'',
-        dataColIndex:1,
-        dataRowIndex:1,
-        stmtType:'',
-        period:'',
-        otherData:''
+        currency: '',
+        units: '',
+        dataColIndex: 1,
+        dataRowIndex: 1,
+        stmtType: '',
+        period: '',
+        otherData: ''
     };
 
-    let units:string = '';
-    let [dataCol, dataRow]:[number, number] = [0,0];
-        
-    let stmtType:string = '';
-    let [period, otherData]:[string, string] = ['', ''];
+    let units: string = '';
+    let [dataCol, dataRow]: [number, number] = [0, 0];
+
+    let stmtType: string = '';
+    let [period, otherData]: [string, string] = ['', ''];
+
+
 
     // end setup
     // ------------------------
 
+
+    // this function is to determine what kind of a table we are dealing with.
+    // we can make the determination on what to parse
     // select the table for parsing
-    const table:HTMLTableElement | null = doc.querySelector('table.report'); 
+    const table: HTMLTableElement | null = doc.querySelector('table.report');
+    if (!table) throw new Error('Table with className=report was not found');
 
-    if (!table) throw new Error('Table with className=report was not found')
-    
-        // select header rows for parsing
-    const headerCellCollection:NodeListOf<HTMLTableCellElement> = table.querySelectorAll('th');
+    // --- PRE-PROCESSING: Remove rows containing nested footnote tables ---
+    // Find all TD cells that directly contain a table with class 'outerFootnotes'
+    const cellsWithFootnoteTables: NodeListOf<HTMLTableCellElement> = table.querySelectorAll('td > table.outerFootnotes');
+    console.log(`Found ${cellsWithFootnoteTables.length} nested 'outerFootnotes' tables.`);
 
-    if (!headerCellCollection) throw new Error("No header cells found");
-    
-    
-    headerCellCollection.forEach((headerCell:HTMLTableCellElement,index:number) => {
-        // we only care about the 1st cell for now, whch will tell us the x,y of statement numerical data
-        if (index === 0) {
-            if (headerCell.hasAttribute('colspan')) {
-                console.log(headerCell.colSpan);
-                dataCol = Number(headerCell.colSpan)||1;            
+    cellsWithFootnoteTables.forEach(footnoteTable => {
+        // Find the parent TD of this footnote table
+        const parentCell = footnoteTable.parentElement;
+        if (parentCell && parentCell.tagName === 'TD') {
+            // Find the parent TR of that TD
+            const parentRow = parentCell.closest('tr');
+            if (parentRow && parentRow.parentElement) {
+                console.log("Removing entire row containing a footnote table:", parentRow.outerHTML.substring(0, 150) + "...");
+                parentRow.parentElement.removeChild(parentRow);
+            } else {
+                console.warn("Could not find parent <tr> for a cell containing a footnote table, or it has no parent.", parentCell);
             }
-    
-            if (headerCell.hasAttribute('rowspan')) {
-                console.log(headerCell.rowSpan);
-                dataRow = Number(headerCell.rowSpan)||1;
-            }
-            let stmtMd:string = String(headerCell.textContent) || '';            
-            if (stmtMd !== null || stmtMd !== '') {             
-                console.log(`Searching ${stmtMd}`)
-                //const currency:string = (stmtMd.search(/(\$|USD)*/ig) ? 'USD';
-                
-                const unitsFound:string[] = stmtMd.match(/((B|M)?illion+(s)?)/ig) || [''];
-                units = unitsFound[0];
-                
-                let stmtTypeMD:string[]|null = stmtMd.match(/(income statement|balance sheet|cash (flows|flow))/i); //stmtMd.match(/Balance|Income|Cash/ig);
-                const stmtTypeMatch = stmtMd.match(/(income statement|balance sheet|cash (flows|flow))/i);
-                
-                if (stmtTypeMatch) {
-                    if (/income/i.test(stmtTypeMatch[0])) stmtType = 'income';
-                    else if (/balance/i.test(stmtTypeMatch[0])) stmtType = 'balance';
-                    else if (/cash/i.test(stmtTypeMatch[0])) stmtType = 'cash';
-                }
-            }
-            
-        }
-        else {
-            // we are not in the 1st cell, 
-            // here we can again check for rowSpan which contain period ending or other info
-            // now we can see if we can find "reporting periods"
-            let temp:string[] = [];
-            if (headerCell.getAttribute('colspan')) {
-                otherData = (headerCell.textContent||'');
-            }
-            else {
-                if (dataCol === index) period = headerCell.textContent || '';
-            }
-        }
-
-        metadata = {
-            currency:'USD', // not yet parsed, assumed to be USD because we are only dealing with US listed companies
-            units:units,   
-            dataColIndex:dataCol,   // we have already captured this
-            dataRowIndex:dataRow,   // already captured this
-            stmtType:stmtType,   // good to capture this 
-            period:period,
-            otherData:otherData
+        } else {
+             console.warn("Could not find parent <td> for a footnote table, or footnote table is not a direct child of td.", footnoteTable);
         }
     });
+    // --- END PRE-PROCESSING ---
 
-    const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll(':scope > tbody > tr, :scope > tr');
-    //const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll('table.report tr');
-    if (!contentRows || contentRows.length === 0) {
-        throw new Error('No rows found in statement table');
-    }
 
-    const forceExit:boolean = false;
-   
-    // lets try a nested loop approach to concretely tell where the start of our data rows is
-    // outter loops over trs, inner goes over tds only
-    contentRows.forEach((row: HTMLTableRowElement, rowIdx: number) => {
-        const contentCells: NodeListOf<HTMLTableCellElement> = row.querySelectorAll('td');
 
-        let cellsPerRow: number = row.childElementCount;
+    // I expect queryselector selects only 1st element
+    // so lets get the 1st row and fix the x, y positions of our data rows.
+    // then we can parse the data out of data rows
+    const firstRow = table.querySelector(':scope thead > tr,:scope tbody > tr,, :scope tr ');
+    const cellsOfFirstRow = firstRow?.querySelectorAll(':scope th');
 
+    let dataCellIdx: number = 0;
+    let lastSpan: number = 0;
+    cellsOfFirstRow?.forEach(cell => {
+        lastSpan = Number(cell.getAttribute('colSpan')) ?? 1;
+        dataCellIdx += lastSpan;
+    });
+
+    // remove the last rowspan and that will be our data index
+    dataCellIdx = dataCellIdx - lastSpan;
+
+
+    const allRows = table.querySelectorAll(':scope thead > tr,:scope tbody > tr, :scope tr');
+
+    allRows?.forEach((row, dataRowIdx) => {
+        const dataCellsPerRow = row.querySelectorAll('td');
+        
         let record: Record<string, number> = {};
         let dataTitle: string = '';
-        let dataItem:number = 0.00;
+        let dataItem: number = 0.00;
 
-        
-        contentCells.forEach((cell: HTMLTableCellElement, cellIdx: number) => {
+        dataCellsPerRow?.forEach((cell, cellIdx) => {
             
-
-                if ((cell.getAttribute('colSpan') && cell.colSpan > 1)) {       
-                    console.log('colspan.................... ', cell.colSpan);
-                    if (cell.firstElementChild?.tagName === 'TABLE') {
-                        console.log(cell.firstElementChild.tagName);
-                        cell.innerHTML = '';
-                    }
+            if ((cell.hasAttribute('colSpan') && Number(cell.getAttribute('colSpan')) > lastSpan)) {       
+                if (cell.firstElementChild?.tagName === 'TABLE') {
+                    console.log(cell.firstElementChild.tagName);
+                    cell.removeChild(cell.firstElementChild);
                 }
+            }
 
-                if (cellIdx === 0) {
-                    dataTitle = String(cell.textContent?.trim().replaceAll(/\s+/g, ' '));   
-                }
-                else if (cellIdx === dataCol) {
-                        
-                        //const value = cell.textContent?.replace(/[$,()]/g, '').trim() || "0";
-                        //const numericValue = isNaN(parseFloat(value)) ? value : parseFloat(value) * (cell.textContent?.includes('(') ? -1 : 1);
-                        const value = cell.textContent?.replace(/[$,()]/g, '').trim() || "0";
-                        let numericValue = parseFloat(value) * (cell.textContent?.includes('(') ? -1 : 1);
+            if (cellIdx === 0) {
+                //dataTitle = cell.textContent??'';
+                dataTitle = String(cell.textContent?.trim().replaceAll(/\s+/g, ' '));
 
-                        // Ensure two decimal precision only if it's a valid number
-                        numericValue = Number(isNaN(numericValue) ? value : parseFloat(numericValue.toFixed(2)));
-                        dataItem = numericValue; //Number(cell.textContent?.trim().replaceAll(/\$*\,*/g, '')) || 0.00;
-                    }
-                
-            
-        });    
+            } else if (cellIdx === dataCellIdx) {
+                //dataItem = Number(cell.textContent) ?? 0;
+                const value = cell.textContent?.replace(/[$,()]/g, '').trim() || "0";
+                let numericValue = parseFloat(value) * (cell.textContent?.includes('(') ? -1 : 1);
+                // Ensure two decimal precision only if it's a valid number
+                numericValue = Number(isNaN(numericValue) ? value : parseFloat(numericValue.toFixed(2)));
+                dataItem = numericValue; //Number(cell.textContent?.trim().replaceAll(/\$*\,*/g, '')) || 0.00;
+
+            }
+        });
 
         record[dataTitle] = dataItem;
         //console.log(record);
         if (dataTitle !== '') data.push(record);
     });
 
-    //console.log(metadata);
     console.log(data);
 }
 
 // call our functions here
 async function main() {
     console.log('..................................................');
-    const htmlDoc: string = await fs.promises.readFile(path.join('./static/R2.htm'), 'utf-8');
+    const htmlDoc: string = await fs.promises.readFile(path.join('./static/R4.htm'), 'utf-8');
     await testHTMLParsing(htmlDoc);
 }
 

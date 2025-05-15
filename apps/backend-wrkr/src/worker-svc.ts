@@ -30,7 +30,7 @@ console.timeStamp('Worker Setup');
 const bootstrap = await bootstrapApiServices();
 // initialize Logger
 const loggingSvc: LoggingService = bootstrap.loggingSvc;
-const log:Log = loggingSvc.getLogger('wrkr-main');
+const log:Log = bootstrap.log; //loggingSvc.getLogger('wrkr-main');
 
 // init Redis Connection
 const redisSvc: RedisService = bootstrap.redisSvc
@@ -72,6 +72,7 @@ log.info('Starting central worker loop...');
             // Pause only if completely idle AND using timed BLPOP internally
             if (!workDoneInCycle && !isShuttingDown) {
                 log.info('Idle cycle, pausing...');
+                console.log('Idle cycle, pausing...');
                 await new Promise(resolve => setTimeout(resolve, 200)); // Adjust pause as needed
             }
             // Optional yield
@@ -83,6 +84,7 @@ log.info('Starting central worker loop...');
         }
     } // end while
     log.info('Central worker loop exited.');
+    console.log('Central worker loop exited.');
 }
 
 // --- Main Startup Function ---

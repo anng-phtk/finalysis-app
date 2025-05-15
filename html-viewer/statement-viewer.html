@@ -113,7 +113,8 @@
 
       const headerTitleCell = document.createElement('th');
 
-      headerTitleCell.innerHTML = `${data[0].statementType}`;
+      // set the 1 row title
+      headerTitleCell.innerHTML = `${data[0].parsedData.metadata.stmtType} <p /> ${data[0].parsedData.metadata.currency} ${data[0].parsedData.metadata.units}`//statementType}`;
       headerTitleCell.setAttribute('class', '');
 
       const headerRow = document.createElement('tr');
@@ -121,6 +122,7 @@
 
       // Normalize dates to 'YYYY-MM-DD' for consistent indexing
       // create headers for showing this document
+
       data.forEach((stmt, idx) => {
         const filingKey = new Date(stmt.filingDate).toISOString().split('T')[0];
         //const filingKey = `${new Date(stmt.filingDate).toISOString().split('T')[0]} - ${stmt.sourceFile}`;
@@ -136,7 +138,7 @@
           const stmtURI = document.createElement('a');
           stmtURI.setAttribute('href', `https://www.sec.gov/Archives/edgar/data/${stmt.cik}/${stmt.accessionNumber}/${stmt.sourceFile}`);
           stmtURI.setAttribute('target', `_blank`);
-          stmtURI.innerText = `${filingKey}`;
+          stmtURI.innerHTML = `${filingKey}</p><sub>${stmt.parsedData.metadata.otherData}</sub>`;
 
           headerCell.appendChild(stmtURI);
           headerRow.appendChild(headerCell);
@@ -169,10 +171,8 @@
       mapOfMasterKeys.forEach((cols, rowLabel, map) => {
         const tblrow = document.createElement("tr");
 
-
-
         const headercell = document.createElement("td");
-        headercell.innerHTML = rowLabel
+        headercell.innerHTML = rowLabel;
         tblrow.appendChild(headercell);
 
         const row = { rowLabel };
@@ -197,133 +197,6 @@
 
 
 
-    const transformJSONGEMINI = (data) => {
-      console.log("transformJSON: Starting with data:", data);
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        console.error("transformJSON: Invalid or empty data array provided.");
-        return document.createElement('p').appendChild(document.createTextNode('No data to display.'));
-      }
-
-      const statementType = data[0]?.statementType?.toUpperCase() || 'Unknown'; // Get type from first entry
-      const masterKeys = new Map(); // Map<lineItemKey, true> - To get unique keys in order
-      const statementDataMap = new Map(); // Map<columnKey, Map<lineItemKey, value>>
-      const columnKeysSet = new Set(); // To get unique column keys
-
-      // --- PASS 1: Collect all unique keys and map data by column ---
-      console.log("transformJSON: Starting Pass 1...");
-      data.forEach((stmt, stmtIndex) => {
-        if (!stmt || !Array.isArray(stmt.parsedData) || !stmt.filingDate || !stmt.formType || !stmt.sourceFile) {
-          console.warn(`Skipping statement ${stmtIndex} in Pass 1 due to missing fields.`);
-          return;
-        }
-        // Create a unique key for the column header (Date + Form + Source)
-        const columnKey = `${formatDate(stmt.filingDate)} (${stmt.formType} ${stmt.sourceFile})`;
-        columnKeysSet.add(columnKey);
-
-        const itemMap = new Map(); // Map<lineItemKey, value> for THIS statement
-        stmt.parsedData.forEach((item, itemIndex) => {
-          if (typeof item !== 'object' || item === null || Object.keys(item).length === 0) {
-            console.warn(`Skipping invalid item at index ${itemIndex} in statement ${stmtIndex}`);
-            return;
-          }
-          const key = Object.keys(item)[0];
-          const value = item[key];
-
-          // Add to master list if new
-          if (!masterKeys.has(key)) {
-            masterKeys.set(key, true);
-          }
-          // Add item to this statement's map
-          itemMap.set(key, value);
-        });
-
-        // Store this statement's map using the unique column key
-        if (itemMap.size > 0) {
-          statementDataMap.set(columnKey, itemMap);
-        }
-      });
-
-      const orderedMasterKeys = Array.from(masterKeys.keys());
-      // Sort column keys robustly by date, then source file
-      const orderedColumnKeys = Array.from(columnKeysSet).sort((a, b) => {
-        try {
-          const matchA = a.match(/^(.*?) \((.*?) (.*?)\)$/);
-          const matchB = b.match(/^(.*?) \((.*?) (.*?)\)$/);
-          if (!matchA || !matchB) return 0;
-          const dateA = new Date(matchA[1]).getTime();
-          const dateB = new Date(matchB[1]).getTime();
-          if (isNaN(dateA) || isNaN(dateB)) return 0;
-          if (dateB !== dateA) return dateB - dateA; // Desc date
-          return (matchA[3] || '').localeCompare(matchB[3] || ''); // Asc sourceFile
-        } catch { return 0; }
-      });
-
-      console.log(`transformJSON: Pass 1 Complete. Master Keys: ${orderedMasterKeys.length}, Columns: ${orderedColumnKeys.length}`);
-      if (orderedMasterKeys.length === 0 || orderedColumnKeys.length === 0) {
-        console.error("transformJSON: No valid keys or columns found.");
-        return document.createElement('p').appendChild(document.createTextNode('Could not generate table structure.'));
-      }
-
-      // --- PASS 2: Build HTML Table ---
-      console.log("transformJSON: Starting Pass 2...");
-      const tbl = document.createElement("table");
-      tbl.setAttribute('id', `${statementType.toLowerCase()}-table`); // Use lowercase type for ID
-      tbl.setAttribute('style', 'border:1px solid #efefef;'); // Basic style
-
-      const headerRow = tbl.createTHead().insertRow();
-      headerRow.insertCell().outerHTML = '<th>Item</th>'; // Header for item column
-      orderedColumnKeys.forEach(colKey => {
-        const headerText = colKey.replace(/ \(/, '<br>('); // Nicer header format
-        headerRow.insertCell().outerHTML = `<th>${headerText}</th>`;
-      });
-      console.log("transformJSON: Header row created.");
-
-      const tbody = tbl.createTBody();
-      orderedMasterKeys.forEach((key) => {
-        // Skip rendering header-like rows based on colon
-        if (typeof key === 'string' && key.trim().endsWith(':')) {
-          console.log(`Skipping rendering row for header: ${key}`);
-          return;
-        }
-
-        const tblrow = tbody.insertRow();
-        tblrow.setAttribute('style', 'border:1px solid #000; background-color:#ffffff;'); // Basic style
-        tblrow.insertCell().textContent = key; // Item name cell
-
-        orderedColumnKeys.forEach(colKey => {
-          const cell = tblrow.insertCell();
-          cell.setAttribute('style', 'text-align:right; white-space:nowrap;'); // Style value cells
-          const itemsForDate = statementDataMap.get(colKey);
-          const value = itemsForDate?.get(key); // Lookup value
-
-          if (value !== undefined && value !== null) {
-            if (Array.isArray(value)) { // Handle equity arrays
-              cell.innerHTML = value.map(v => `<span>${formatNumberSimple(v)}</span>`).join('<br>');
-            } else {
-              cell.textContent = formatNumberSimple(value);
-            }
-          } else {
-            cell.textContent = '-'; // Placeholder for missing data
-          }
-        });
-      });
-      console.log(`transformJSON: Table body created with ${tbody.rows.length} rows.`);
-
-      // Add a caption for context
-      const caption = tbl.createCaption();
-      caption.textContent = `${statementType.replace(/_/g, ' ')} STATEMENTS`;
-      caption.style.fontWeight = 'bold';
-      caption.style.fontSize = '1.1em';
-      caption.style.padding = '0.5em';
-      caption.style.textAlign = 'left';
-
-      console.log("transformJSON: Table built successfully.");
-      return tbl; // Return the generated table element
-    };
-
-    // --- Helper Functions ---
-    function formatNumberSimple(value) { /* ... (same as before) ... */ }
-    function formatDate(dateString) { /* ... (same as before) ... */ }
 
     // Definition of helper functions (copied from previous version for completeness)
     function formatNumberSimple(value) {
