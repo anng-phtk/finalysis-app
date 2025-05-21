@@ -24,8 +24,8 @@ async function main() {
     const htmlFilePath = path.join(process.cwd(), '../src/static/AMDEquityR7.htm');
     try {
         const htmlDoc: string = await fs.promises.readFile(htmlFilePath, 'utf-8');
-        //const data:ParsedStatement = parserTester.parseStatement(htmlDoc);
-        const data:ParsedStatement = parserTester.parseEquityStatement(htmlDoc)
+        const data:ParsedStatement = parserTester.parseStatement(htmlDoc);
+        //const data:ParsedStatement = parserTester.parseEquityStatement(htmlDoc)
         console.log(data);
         
     } catch (err) {
