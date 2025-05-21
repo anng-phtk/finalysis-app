@@ -589,7 +589,7 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
                 if (index === 0) {
                     if (headerCell.hasAttribute('colspan')) {
                         this.parserLogger.info(`Header cell has colspan ${headerCell.colSpan}`);
-                        dataCol = Number(headerCell.colSpan) || 1; //commenting out: we have already calculated this in prework section
+                        //dataCol = Number(headerCell.colSpan) || 1; //commenting out: we have already calculated this in prework section
                     }
 
                     if (headerCell.hasAttribute('rowspan')) {

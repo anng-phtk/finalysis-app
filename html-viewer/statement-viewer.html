@@ -31,16 +31,17 @@
       <form id="stmtForm">
         <div class="row justify-content-top p-2">
           <div class="col input-group">
-              <div class="input-group-prepend">
-                <span class="input-group-text">Ticker:</span>
-              </div>
-              <input type="text" id="tickerInput" name="ticker" class="form-control" required="true" placeholder="e.g., NVDA, AAPL" value="AMD" />
+            <div class="input-group-prepend">
+              <span class="input-group-text">Ticker:</span>
+            </div>
+            <input type="text" id="tickerInput" name="ticker" class="form-control" required="true"
+              placeholder="e.g., NVDA, AAPL" value="AMD" />
           </div>
         </div>
 
         <div class="row justify-content-top px-2">
           <div class="col-3 input-group">
-            
+
             <div class="input-group-prepend">
               <span class="input-group-text">Statement:</span>
             </div>
@@ -49,7 +50,7 @@
               <option value="INCOME">Income</option>
               <option value="BALANCE" selected>Balance Sheet</option>
               <option value="CASHFLOW">Cash Flow</option>
-              <option value="EQUITY">Equity</option>
+              <option value="EQUITY" selected="'true">Equity</option>
             </select>
           </div>
 
@@ -63,7 +64,7 @@
               <option value="10-Q">10-Q</option>
             </select>
           </div>
-        
+
           <div class="col-3 input-group">
             <div class="input-group-prepend">
               <span class="input-group-text">Periods (Limit):</span>
@@ -84,7 +85,7 @@
             </select>
           </div>
         </div>
-        
+
         <div class="row justify-content-center p-2">
           <button type="submit" class="btn btn-primary col justify-content-center ml-2 mr-2">Fetch Statements</button>
         </div>
@@ -97,6 +98,95 @@
 
   </div>
   <script>
+    const transformEquityJSON = (data) => {
+      const container = document.createDocumentFragment();
+
+      data.forEach(doc => {
+        const stmtEquityData = doc.parsedData.equityData;
+        const headers = doc.parsedData.headerData || [];
+
+        const table = document.createElement("table");
+        table.setAttribute('class', 'table table-striped table-sm');
+
+        // Title
+        const title = document.createElement("h4");
+ 
+        title.textContent = `${doc.ticker} - ${doc.formType} Filed on: ` + formatDate(new Date(doc.filingDate).toISOString().split('T')[0]); //`${doc.ticker} – ${doc.formType} (${new Date(doc.filingDate.$date).toLocaleDateString()})`;
+        container.appendChild(title);
+
+        // Determine max columns from actual data if headerData missing
+        const maxCols = Math.max(...stmtEquityData.map(obj => {
+          return Object.values(obj)[0].length;
+        }))
+
+        // Table header
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+        headerRow.setAttribute('class', 'table-primary');
+
+        // First column for "Line Item"
+        const labelTh = document.createElement("th");
+        labelTh.setAttribute('align', 'center');
+        labelTh.setAttribute('valign', 'middle');
+        labelTh.setAttribute('class', 'col-4');
+        
+        const stmtLink = document.createElement('a');
+        stmtLink.setAttribute('href', `https://www.sec.gov/Archives/edgar/data/${doc.cik}/${doc.accessionNumber}/${doc.sourceFile}`)
+        stmtLink.textContent = `${doc.parsedData.metadata.stmtType}`;
+        labelTh.appendChild(stmtLink);
+
+        headerRow.appendChild(labelTh);
+
+        // Use headerData if present, else fallback to generic column labels
+        //if (headers.length === maxCols) {
+        headers.forEach(h => {
+          const th = document.createElement("th");
+
+          th.setAttribute('align', 'center');
+          th.setAttribute('valign', 'middle');
+          th.setAttribute('scope', 'col');
+          th.setAttribute('class', 'col-1');
+          th.setAttribute('style', 'text-align:center;');
+          th.textContent = h;
+
+          headerRow.appendChild(th);
+        });
+        
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Table body
+        const tbody = document.createElement("tbody");
+
+        stmtEquityData.forEach(stmtItem => {
+          const row = document.createElement("tr");
+          const [label, values] = Object.entries(stmtItem)[0];
+
+          const keyCell = document.createElement("td");
+
+          keyCell.textContent = label;
+          row.appendChild(keyCell);
+
+          values.forEach(val => {
+            const cell = document.createElement("td");
+            cell.setAttribute('align', 'right')
+            cell.textContent = formatNumberSimple(val);
+            row.appendChild(cell);
+          });
+
+          tbody.appendChild(row);
+        });
+
+        table.appendChild(tbody);
+
+        container.appendChild(table);
+      });
+
+      return container;
+    };
+
+
 
     const transformJSON = (data) => {
       const mapOfMasterKeys = new Map();
@@ -105,24 +195,27 @@
 
       const tbl = document.createElement("table");
       tbl.setAttribute('id', `${data[0].statementType}`);
-      tbl.setAttribute('class', 'table table-striped table-bordered');
+      tbl.setAttribute('class', 'table table-striped table-bordered table-sm');
 
-      const tHead = document.createElement("thead"); tHead.setAttribute('class', 'thead thead-light');
+      const tHead = document.createElement("thead");
+      tHead.setAttribute('class', 'thead');
       const tBody = document.createElement("tbody");
 
 
       const headerTitleCell = document.createElement('th');
-
+      headerTitleCell.setAttribute('scope', 'col');
+      headerTitleCell.setAttribute('class', 'col-2');
+      headerTitleCell.setAttribute('style', 'text-align:center');
       // set the 1 row title
-      headerTitleCell.innerHTML = `${data[0].parsedData.metadata.stmtType} <p /> ${data[0].parsedData.metadata.currency} ${data[0].parsedData.metadata.units}`//statementType}`;
-      headerTitleCell.setAttribute('class', '');
+      headerTitleCell.textContent = data[0].parsedData.metadata.stmtType; //statementType}`;
+      // <p /> ${data[0].parsedData.metadata.currency} ${data[0].parsedData.metadata.units}
+      
 
       const headerRow = document.createElement('tr');
       headerRow.appendChild(headerTitleCell);
 
       // Normalize dates to 'YYYY-MM-DD' for consistent indexing
       // create headers for showing this document
-
       data.forEach((stmt, idx) => {
         const filingKey = new Date(stmt.filingDate).toISOString().split('T')[0];
         //const filingKey = `${new Date(stmt.filingDate).toISOString().split('T')[0]} - ${stmt.sourceFile}`;
@@ -132,15 +225,26 @@
 
           filingDates.push(filingKey);
 
+          // create header titlecell and set its attributes
           const headerCell = document.createElement('th');
-          headerCell.setAttribute('class', 'text-nowrap');
-
+          headerCell.setAttribute('align', 'center');
+          headerCell.setAttribute('valign', 'middle');
+          headerCell.setAttribute('class', 'col-1');
+          headerCell.setAttribute('style', 'text-align:center');
+          
           const stmtURI = document.createElement('a');
           stmtURI.setAttribute('href', `https://www.sec.gov/Archives/edgar/data/${stmt.cik}/${stmt.accessionNumber}/${stmt.sourceFile}`);
           stmtURI.setAttribute('target', `_blank`);
-          stmtURI.innerHTML = `${filingKey}</p><sub>${stmt.parsedData.metadata.otherData}</sub>`;
+          stmtURI.textContent = formatDate(filingKey);
 
+          const subTxt = document.createElement('sub');
+          const para = document.createElement('p');
+          subTxt.textContent = stmt.parsedData.metadata.otherData;
+
+          
           headerCell.appendChild(stmtURI);
+          para.appendChild(subTxt);
+          headerCell.appendChild(para);
           headerRow.appendChild(headerCell);
         }
       });
@@ -158,6 +262,7 @@
           if (!mapOfMasterKeys.has(key)) {
             mapOfMasterKeys.set(key, new Array(mergeHelper.size).fill(null));
           }
+
           mapOfMasterKeys.get(key)[colIdx] = val;
         });
       });
@@ -172,6 +277,7 @@
         const tblrow = document.createElement("tr");
 
         const headercell = document.createElement("td");
+        headercell.setAttribute('class', 'col-1');
         headercell.innerHTML = rowLabel;
         tblrow.appendChild(headercell);
 
@@ -180,7 +286,9 @@
         filingDates.forEach((date, idx) => {
           row[date] = cols[idx];
           const cell = document.createElement("td");
-          cell.innerHTML = cols[idx];
+          cell.setAttribute('align', 'right');
+          cell.innerHTML = formatNumberSimple(cols[idx]);
+          //console.log(formatNumberSimple(cols[idx]), "................");
           tblrow.appendChild(cell);
         });
 
@@ -189,10 +297,7 @@
       });
 
       tbl.appendChild(tBody);
-
-      console.table(tableRows);
       return tbl;
-
     };
 
 
@@ -201,16 +306,20 @@
     // Definition of helper functions (copied from previous version for completeness)
     function formatNumberSimple(value) {
       if (typeof value === 'number') {
-        return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
       }
-      if (value === null || value === undefined) return 'N/A';
+
+      if (value === null || value === undefined) return '0.00';
+
       const cleanedValue = String(value).replace(/,/g, '');
+      
       const num = parseFloat(cleanedValue);
       if (!isNaN(num)) {
-        return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
       }
       return String(value);
     }
+
     function formatDate(dateString) {
       if (!dateString) return 'N/A';
       try {
@@ -241,7 +350,13 @@
 
         const container = document.getElementById('stmtContainer');
         container.innerHTML = ''; // Clear old data
-        container.appendChild(transformJSON(stmtData));
+
+        if (type !== 'EQUITY') {
+          container.appendChild(transformJSON(stmtData));
+        }
+        else {
+          container.appendChild(transformEquityJSON(stmtData));
+        }
       });
     });
   </script>

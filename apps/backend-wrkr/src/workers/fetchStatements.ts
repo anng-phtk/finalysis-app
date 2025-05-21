@@ -110,9 +110,7 @@ export const wrkrFetchStatments = async (
                         (filing as FinancialStatement).filingData = parsedData.stmtData
                         
                     }
-
-                
-                              
+                    
                     wrkrLogger.info(`[STMT DATA]:\n\t${JSON.stringify(filing)}`); // don't long entire statmenets here
                     wrkrLogger.info(`[STMT DATA]: successfully parsed ${stmt} data`);
 
@@ -143,8 +141,7 @@ export const wrkrFetchStatments = async (
                     } else {
                         wrkrLogger.warn(`Upsert statement returned false (no change?): ${stmtDoc._id}`);
                     }
-
-                } // end the for loop
+                } // end the for loop2
             }
 
         // job done!

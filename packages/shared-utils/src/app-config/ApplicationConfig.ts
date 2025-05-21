@@ -92,13 +92,15 @@ export const JobsMetadata = {
         lookup_cik:'channel:lookup:cik',
         recent_filings:'channel:lookup:recentfilings',
         fetch_summaries:'channel:fetch:filingsummaries',
-        fetch_financial_stmts:'channel:fetch:statements'
+        fetch_financial_stmts:'channel:fetch:statements',
+        filter_kpi_data:'channel:filter:kpidata'
     },
     JobNames:{
         lookup_cik:'job:lookup:cik',
         recent_filings:'job:lookup:recentfilings',
         fetch_summaries:'job:fetch:filingsummaries',
-        fetch_financial_stmts:'job:fetch:statements'
+        fetch_financial_stmts:'job:fetch:statements',
+        filter_kpi_data:'job:filter:kpidata'
     }
 }
 

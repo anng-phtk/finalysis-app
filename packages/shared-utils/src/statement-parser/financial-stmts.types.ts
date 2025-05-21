@@ -24,6 +24,7 @@ export interface FinancialStmtMetadata {
 }
 
 export interface ParsedStatement {
+    headerData?:string[];
     metadata: FinancialStmtMetadata;
     stmtData?: Array<Record<string, string|number>>;
     equityData?:Array<Record<string, string[]|number[]>>;
