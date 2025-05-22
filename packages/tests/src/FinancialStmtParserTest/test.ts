@@ -19,9 +19,9 @@ const parserTester: FinancialStmtParserSvc = createFinancialStmtParserSvc(loggin
 
 // call our functions here
 async function main() {
-    console.log('..................................................');
+    console.log('.......................\nparserTester\n...........................');
     // Assuming AMDR2.htm is in a 'static' folder relative to where this script runs
-    const htmlFilePath = path.join(process.cwd(), '../src/static/AMDEquityR7.htm');
+    const htmlFilePath = path.join(process.cwd(), '../src/static/R2.htm');
     try {
         const htmlDoc: string = await fs.promises.readFile(htmlFilePath, 'utf-8');
         const data:ParsedStatement = parserTester.parseStatement(htmlDoc);

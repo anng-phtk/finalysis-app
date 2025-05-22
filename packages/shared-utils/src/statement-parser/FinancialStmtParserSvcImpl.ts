@@ -341,7 +341,7 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
             // I expect queryselector selects only 1st element
             // so lets get the 1st row and fix the x, y positions of our data rows.
             // then we can parse the data out of data rows
-            const firstRow = table.querySelector(':scope thead > tr, :scope tbody > tr, :scope tbody > tr,, :scope tr ');
+            const firstRow = table.querySelector(':scope thead > tr, :scope tbody > tr, :scope tbody > tr, :scope tr ');
             if (!firstRow) throw new Error("316:No header row found");
 
             const cellsOfFirstRow = firstRow?.querySelectorAll(':scope th');
@@ -501,6 +501,8 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
     /**
      * Parses a standard financial statement HTML table.
      */
+
+
     public parseStatement(htmlContent: string): ParsedStatement {   // Array<Record<string, string | number>>
         this.parserLogger.info(`[STANDARD STATEMENT]: Start parsing`);
         try {
@@ -562,34 +564,45 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
             // I expect queryselector selects only 1st element
             // so lets get the 1st row and fix the x, y positions of our data rows.
             // then we can parse the data out of data rows
-            const firstRow = table.querySelector(':scope thead > tr, :scope tbody > tr, :scope tbody > tr,, :scope tr ');
+            const firstRow = table.querySelector(':scope thead > tr, :scope tbody > tr, :scope tbody > tr,:scope tr ');
             if (!firstRow) throw new Error("446:No header row found");
 
+            // this is expected to select TH cells only from the 1st row.
             const cellsOfFirstRow = firstRow?.querySelectorAll(':scope th');
 
             dataCol = 0;
             let lastSpan: number = 0;
-            cellsOfFirstRow?.forEach(cell => {
+            //lets investigate if we have a 2nd heading row
+            let firstHeaderCellRowSpan:number = 1;            
+
+            cellsOfFirstRow?.forEach((cell, firstRowCellIdx) => {
                 lastSpan = Number(cell.getAttribute('colSpan')) ?? 1;
                 dataCol += lastSpan;
+
+                // we can leverage this loop to perform some additional data capture
+                if (firstRowCellIdx === 0) {
+                    //opportunity to see if this has more header rows too?
+                    // if this 1st header cell has rowspan gt 1, that means we can expect data like "3 months ended" to be in the 1st row of the next th
+                    // also, we can expect the period data to be in the 2nd row of the th cells.
+                    firstHeaderCellRowSpan = Number(cell.getAttribute('rowSpan') || 1);
+                }
             });
 
             // remove the last rowspan and that will be our data index
             dataCol = dataCol - lastSpan;
-
+            console.log(dataCol, firstHeaderCellRowSpan, "....................... is the point where data will start")
             // select header rows for parsing
             const headerCellCollection: NodeListOf<HTMLTableCellElement> = firstRow.querySelectorAll('th');
             if (!headerCellCollection) throw new Error("462: No header cells found");
 
-
             headerCellCollection.forEach((headerCell: HTMLTableCellElement, index: number) => {
-
+            
 
                 // we only care about the 1st cell for now, whch will tell us the x,y of statement numerical data
                 if (index === 0) {
                     if (headerCell.hasAttribute('colspan')) {
                         this.parserLogger.info(`Header cell has colspan ${headerCell.colSpan}`);
-                        dataCol = Number(headerCell.colSpan) || 1; //commenting out: we have already calculated this in prework section
+                        //dataCol = Number(headerCell.colSpan) || 1; //commenting out: we have already calculated this in prework section
                     }
 
                     if (headerCell.hasAttribute('rowspan')) {
@@ -614,7 +627,6 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
                         }
                         */
                     }
-
                 }
                 else {
                     // we are not in the 1st cell, 
@@ -645,8 +657,41 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
             });
 
 
-            //const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll('table.report tr');
-            // better control over our selections
+            console.log('.start checking 2nd row..because rowspan=', firstHeaderCellRowSpan)
+            //assuming our 1st cell had rowspan>1 tthen we have likely not captured the period info
+            // now lets run 1 more loop on the header cells to see if we can find this info
+            
+
+            if (firstHeaderCellRowSpan > 1) {
+                const allRows:NodeListOf<HTMLTableRowElement> = table.querySelectorAll(':scope thead > tr, :scope tbody > tr, :scope tbody > tr,, :scope tr ');
+
+                // not interested in TDs, only in THs
+                const titleCells:NodeListOf<HTMLTableCellElement> = allRows[firstHeaderCellRowSpan-1].querySelectorAll('th');
+                let calcTitleCellBasedOnColSpan:number = 0;
+
+                titleCells.forEach((eachCell, titleCellIdx) => {
+                    calcTitleCellBasedOnColSpan += Number(eachCell.getAttribute('colspan')||1);
+                    if (dataCol === calcTitleCellBasedOnColSpan) {
+                        // and that, my friend is how to calculate the exact data header for period in a complex table
+                        this.parserLogger.debug("COMPLEX TABLE: this is the period we are interested in ", dataCol, eachCell.textContent);
+                        period = String(eachCell.textContent)??'';
+                    }    
+                })
+
+                metadata = {
+                    currency: 'USD', // not yet parsed, assumed to be USD because we are only dealing with US listed companies
+                    units: units,
+                    dataColIndex: dataCol,   // we have already captured this
+                    dataRowIndex: dataRow,   // already captured this
+                    stmtType: stmtType,   // good to capture this 
+                    period: period,
+                    otherData: otherData
+                }
+
+            }
+
+
+            // better control over our selections by running a nested loop over cells per iteration over each row.
             const contentRows: NodeListOf<HTMLTableRowElement> = table.querySelectorAll(':scope > tbody > tr, :scope > tr');
 
             if (!contentRows || contentRows.length === 0) {
@@ -665,7 +710,6 @@ class FinancialStmtParserSvcImpl implements FinancialStmtParserSvc {
                 let dataItem: number = 0.00;
 
                 contentCells.forEach((cell: HTMLTableCellElement, cellIdx: number) => {
-
                     // sometimes these tables generate footnotes
                     // todo: find a way to capture, but lets not pollute the JSON structure
                     // for now, just remove those

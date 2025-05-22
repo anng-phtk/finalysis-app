@@ -103,7 +103,7 @@ export class StatementDaoImpl implements StatementDao {
             this.log.info(`Found ${documents.length} statements for filing`, { filter });
             return documents;
         } catch (error: any) {
-            this.log.error(`Error finding statements by filing ${filter}, ${ error }`);
+            this.log.error(`Error finding statements by filing ${filter}, ${error}`);
             throw new DatabaseError(`Database find failed for filing ${accessionNumber}`, error);
         }
     }
@@ -114,8 +114,8 @@ export class StatementDaoImpl implements StatementDao {
     public async findStatementsByTicker(
         ticker: string,
         statementType?: string,
-        formType?:string,
-        limit: number = 20, // Default limit
+        formType?: string,
+        limit: number = 0, // Default limit
         sortOrder: 1 | -1 = -1 // Default sort descending (most recent first)
     ): Promise<StatementDoc[]> {
         const filter: Filter<StatementDoc> = { ticker };
@@ -130,24 +130,33 @@ export class StatementDaoImpl implements StatementDao {
         const sort: Sort = { filingDate: sortOrder };
 
         this.log.debug(`Finding statements by ticker`, { filter, limit, sort });
-        
+
         try {
-            const documents = await this.collection.find(filter)
-                .sort(sort)
-                .limit(limit)
-                .toArray();
-            this.log.info(`Found ${documents.length} statements for ticker ${ticker}`, { filter, limit });
+            let cursor = this.collection.find(filter).sort(sort);
+
+            if (limit > 0) {
+                cursor = cursor.limit(limit);
+            }
+            // If limit is 0 or less, we don't apply .limit(), so it fetches all matching.
+
+            const documents = await cursor.toArray();
+            
+            this.log.info(`Found ${documents.length} statements for ticker ${ticker}`, { 
+                filter, 
+                limitApplied: limit > 0 ? limit : 'NONE (all matching)', 
+                count: documents.length 
+            });
         
             return documents;
         } catch (error: any) {
-            this.log.error(`Error finding statements by ticker ${ticker}, ${ filter}, ${error }`);
+            this.log.error(`Error finding statements by ticker ${ticker}, ${filter}, ${error}`);
             throw new DatabaseError(`Database find failed for ticker ${ticker}`, error);
         }
     }
 }
 
 
-export function createStatementDao(db:Db, loggingSvc:LoggingService):StatementDao {
+export function createStatementDao(db: Db, loggingSvc: LoggingService): StatementDao {
     // no caching needed
-    return new StatementDaoImpl(db,loggingSvc);
+    return new StatementDaoImpl(db, loggingSvc);
 }

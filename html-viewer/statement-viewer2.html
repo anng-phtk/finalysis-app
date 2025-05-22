@@ -2,161 +2,400 @@
 <html lang="en">
 
 <head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <title>SEC Statement Viewer</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
-        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous" />
-    <link rel="stylesheet" href="https://jeffreymaniac.github.io/OpenDyslexic-font-for-css/opendyslexic.css" />
+  <title>SEC Statement Viewer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous" />
 
-    <style>
 
-    </style>
+  <style>
+    body {
+        font-family: sans-serif;
+        font-size:0.9rem;
+    }
+    
+    .table-responsive-sm th, .table-responsive-sm td {
+        white-space: normal;
+        word-break: break-word;
+        border: 1px solid #dee2e6; /* Bootstrap default border */
+        padding: 0.5rem;
+        vertical-align: top;
+    }
+    /* Sticky first column for all tables within .table-responsive-sm */
+    .table-responsive-sm th:first-child, 
+    .table-responsive-sm td:first-child {
+        min-width: 250px; /* Increased min-width */
+        white-space: normal;
+        position: sticky;
+        left: 0;
+        background-color: #f8f9fa; /* Light gray for sticky column */
+        z-index: 1;
+        border-right-width: 2px;
+    }
+    .table-responsive-sm td:not(:first-child) {
+        text-align: right;
+        white-space: nowrap;
+    }
+    .table-responsive-sm thead th {
+        position: sticky;
+        top: 0;
+        background-color: #e9ecef; /* Bootstrap default thead */
+        z-index: 2;
+        font-weight: bold;
+        text-align: center; 
+    }
+    .table-responsive-sm thead th.item-header-cell { /* For the top-left "Item" cell */
+        text-align: left;
+        z-index: 3; 
+    }
+    th a { color: #007bff; }
+    th a:hover { text-decoration: underline; }
+
+    /* Equity Table Specific - if needed for displaySingleEquityTable */
+    .equity-table .equity-header-row th { 
+        font-size: 0.8em; 
+        white-space: normal; 
+        text-align: center; 
+    }
+     .equity-table td:not(:first-child) { text-align: right; }
+
+
+    /* General Styles */
+    #loadingIndicator.hidden, #errorArea.hidden, #statusArea.hidden { display: none; }
+    #errorArea, #statusArea { margin-top: 1rem; padding: 0.75rem; border-radius: 0.375rem; border-width: 1px; }
+    #errorArea { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+    #statusArea { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
+    .statement-container { /* For individual equity tables */
+        margin-bottom: 2rem;
+        border: 1px solid #dee2e6;
+        border-radius: .25rem;
+        padding: 1rem;
+        background-color: #fff;
+        overflow-x: auto;
+    }
+    .statement-header {
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .statement-header h3 { margin: 0; font-size: 1.1rem; }
+    .statement-header p { margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #6c757d; }
+    h2.section-title { /* For BALANCE STATEMENTS, INCOME STATEMENTS headers */
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+  </style>
 </head>
 
-<body class="container-fluid fs-6" style="font-family: sans-serif; font-size:0.9rem;">
+<body class="container-fluid fs-6">
 
-    <div>
-        <h1>SEC Statement Viewer</h1>
+  <div>
+    <h1>SEC Statement Viewer</h1>
 
-        <div id="formContainer" class="container py-5">
-            <!--
-    const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
-    const type = document.getElementById('statementTypeInput').value;
-    const formType = document.getElementById('formTypeInput').value;
-    const limit = document.getElementById('limitInput').value;
-    -->
-            <form id="stmtForm">
-                <div class="row justify-content-top p-2">
-                    <div class="col input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text">Ticker:</span>
-                        </div>
-                        <input type="text" id="tickerInput" name="ticker" class="form-control" required="true"
-                            placeholder="e.g., NVDA, AAPL" value="AMD" />
-                    </div>
-                </div>
-
-                <div class="row justify-content-top px-2">
-                    <div class="col-3 input-group">
-
-                        <div class="input-group-prepend">
-                            <span class="input-group-text">Statement:</span>
-                        </div>
-                        <select id="statementTypeInput" name="type" class="form-control">
-                            <option value="">All Types</option>
-                            <option value="INCOME">Income</option>
-                            <option value="BALANCE" selected>Balance Sheet</option>
-                            <option value="CASHFLOW">Cash Flow</option>
-                            <option value="EQUITY">Equity</option>
-                        </select>
-                    </div>
-
-                    <div class="col-3 input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text">Form Type:</span>
-                        </div>
-                        <select id="formTypeInput" name="formType" class="form-control">
-                            <option value="">Both</option>
-                            <option value="10-K" selected>10-K</option>
-                            <option value="10-Q">10-Q</option>
-                        </select>
-                    </div>
-
-                    <div class="col-3 input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text">Periods (Limit):</span>
-                        </div>
-                        <input type="number" id="limitInput" name="limit" value="10" min="1" max="50"
-                            class="form-control">
-                        <!--
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-            -->
-                    </div>
-
-                    <div class="col-3 input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text">Order:</span>
-                        </div>
-                        <select id="sortInput" name="sort" class="select" class="form-control">
-                            <option value="desc" selected>Newest First</option>
-                            <option value="asc">Oldest First</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row justify-content-center p-2">
-                    <button type="submit" class="btn btn-primary col justify-content-center ml-2 mr-2">Fetch
-                        Statements</button>
-                </div>
-            </form>
+    <div id="formContainer" class="container py-5">
+      <form id="stmtForm">
+        <div class="row justify-content-top p-2">
+          <div class="col input-group">
+              <div class="input-group-prepend"><span class="input-group-text">Ticker:</span></div>
+              <input type="text" id="tickerInput" name="ticker" class="form-control" required="true" value="NVDA" />
+          </div>
         </div>
-        <div id="stmtContainer" class="table-responsive-sm">
-
+        <div class="row justify-content-top px-2">
+          <div class="col-md-3 col-sm-6 input-group my-1">
+            <div class="input-group-prepend"><span class="input-group-text">Statement:</span></div>
+            <select id="statementTypeInput" name="type" class="form-control">
+              <option value="">All Types</option>
+              <option value="INCOME">Income</option>
+              <option value="BALANCE">Balance Sheet</option>
+              <option value="CASHFLOW">Cash Flow</option>
+              <option value="EQUITY" selected>Equity (Detailed)</option>
+              {/* Add EQUITY_SUMMARY when backend is ready */}
+              {/* <option value="EQUITY_SUMMARY">Equity Summary (Comparative)</option> */}
+            </select>
+          </div>
+          <div class="col-md-3 col-sm-6 input-group my-1">
+            <div class="input-group-prepend"><span class="input-group-text">Form Type:</span></div>
+            <select id="formTypeInput" name="formType" class="form-control">
+              <option value="">Both</option>
+              <option value="10-K" selected>10-K</option><option value="10-Q">10-Q</option>
+            </select>
+          </div>
+          <div class="col-md-3 col-sm-6 input-group my-1">
+            <div class="input-group-prepend"><span class="input-group-text">Periods:</span></div>
+            <input type="number" id="limitInput" name="limit" value="3" min="1" max="50" class="form-control">
+          </div>
+          <div class="col-md-3 col-sm-6 input-group my-1">
+            <div class="input-group-prepend"><span class="input-group-text">Order:</span></div>
+            <select id="sortInput" name="sort" class="form-control">
+              <option value="desc" selected>Newest First</option><option value="asc">Oldest First</option>
+            </select>
+          </div>
         </div>
-
-
+        <div class="row justify-content-center p-2">
+          <button type="submit" class="btn btn-primary col-md-6 col-12 justify-content-center ml-2 mr-2">Fetch Statements</button>
+        </div>
+      </form>
     </div>
+    <div class="container mb-3">
+        <button type="button" id="exportCsvButton" class="btn btn-success">Export Displayed Table(s) to CSV</button>
+    </div>
+    <div id="loadingIndicator" class="hidden text-center my-4">Loading...</div>
+    <div id="statusArea" class="hidden alert alert-info"></div>
+    <div id="errorArea" class="hidden alert alert-danger"></div>
+    <div id="stmtContainer" class="table-responsive-sm"></div>
+  </div>
+
     <script>
+    // Helper functions
+    function getISODate(d) { try { return new Date(d).toISOString().split('T')[0]; } catch (e) { return String(d); } }
+    function formatDateForDisplay(d) { try { const dt = new Date(d); return isNaN(dt.getTime()) ? String(d) : dt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }); } catch (e) { return String(d); } }
+    function formatNumber(v) { if (typeof v === 'number') return v.toLocaleString('en-US'); if (v === null || v === undefined) return '-'; const n = parseFloat(String(v).replace(/,/g, '')); return isNaN(n) ? String(v) : n.toLocaleString('en-US'); }
+    function logMessage(msg, data = null) { console.log(msg, data ? JSON.stringify(data, null, 2) : ''); }
+    function clearResults() { document.getElementById('stmtContainer').innerHTML = ''; document.getElementById('statusArea').classList.add('hidden'); document.getElementById('errorArea').classList.add('hidden');}
+    function showLoading(isLoading) { document.getElementById('loadingIndicator').classList.toggle('hidden', !isLoading); }
+    function showInfo(message) { const sa = document.getElementById('statusArea'); sa.textContent = message; sa.className = 'alert alert-info'; sa.classList.remove('hidden'); document.getElementById('errorArea').classList.add('hidden'); document.getElementById('stmtContainer').innerHTML = `<p class="text-muted text-center">${message}</p>`;}
+    function showError(message) { const ea = document.getElementById('errorArea'); ea.textContent = message; ea.className = 'alert alert-danger'; ea.classList.remove('hidden'); document.getElementById('statusArea').classList.add('hidden');}
+    function showStatus(message) { const sa = document.getElementById('statusArea'); sa.textContent = message; sa.className = 'alert alert-success'; sa.classList.remove('hidden'); document.getElementById('errorArea').classList.add('hidden');}
 
+    /**
+     * Main display router.
+     */
+    function displayStatements(statements) {
+        const container = document.getElementById('stmtContainer');
+        container.innerHTML = '';
+        if (!statements || statements.length === 0) {
+            showInfo('No statements to display.'); return;
+        }
 
-        const transformJSON = (data) => {
-            const mapOfMasterKeys = new Map();
-            const mergeHelper = new Map();
-            const filingDates = [];
+        const groupedByType = statements.reduce((acc, stmt) => {
+            const type = stmt.statementType?.toUpperCase() || 'UNKNOWN';
+            if (!acc[type]) acc[type] = [];
+            acc[type].push(stmt);
+            return acc;
+        }, {});
 
-            const tbl = document.createElement("table");
-            tbl.setAttribute('id', `${data[0].statementType}`);
-            tbl.setAttribute('class', 'table table-striped table-bordered');
+        const typeOrder = ['BALANCE', 'INCOME', 'CASHFLOW', 'EQUITY', 'EQUITY_SUMMARY', 'UNKNOWN']; // Added EQUITY_SUMMARY
 
-            const tHead = document.createElement("thead"); tHead.setAttribute('class', 'thead thead-light');
-            const tBody = document.createElement("tbody");
+        Object.keys(groupedByType).sort((a,b) => typeOrder.indexOf(a) - typeOrder.indexOf(b)).forEach(statementTypeKey => {
+            const group = groupedByType[statementTypeKey];
+            if(group.length === 0) return;
 
-            const headerTitleCell = document.createElement('th');
-            data.forEach((stmt,idx) => {
-                const filingKey = new Date(stmt.filingDate).toISOString().split('T')[0];
-                console.log(filingKey)
+            const sectionHeader = document.createElement('h2');
+            sectionHeader.className = 'section-title';
+            sectionHeader.textContent = `${statementTypeKey.replace(/_/g, ' ')} STATEMENTS`;
+            container.appendChild(sectionHeader);
+
+            if (statementTypeKey === 'EQUITY') {
+                group.sort((a, b) => new Date(b.filingDate).getTime() - new Date(a.filingDate).getTime()); // Sort individual equity statements
+                group.forEach(stmt => container.appendChild(renderSingleEquityTable(stmt)));
+            } else if (statementTypeKey === 'EQUITY_SUMMARY' || statementTypeKey === 'INCOME' || statementTypeKey === 'BALANCE' || statementTypeKey === 'CASHFLOW') {
+                container.appendChild(transformJSON(group)); // Use transformJSON for comparative
+            } else {
+                 logMessage(`No specific renderer for type: ${statementTypeKey}. Displaying raw.`);
+                 group.forEach(stmt => {
+                     const pre = document.createElement('pre');
+                     pre.textContent = JSON.stringify(stmt, null, 2);
+                     container.appendChild(pre);
+                 });
+            }
+        });
+    }
+
+    /**
+     * Renders a SINGLE Equity statement table.
+     */
+    function renderSingleEquityTable(stmt) {
+        logMessage(`renderSingleEquityTable for: ${stmt._id}`);
+        const tableContainer = document.createElement('div');
+        tableContainer.className = 'statement-container table-responsive-sm'; // Added table-responsive-sm
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'statement-header';
+        const accessionSimple = stmt.accessionNumber.replace(/-/g, '');
+        const secLink = `https://www.sec.gov/Archives/edgar/data/${stmt.cik}/${accessionSimple}/${stmt.sourceFile}`;
+        headerDiv.innerHTML = `<h3>${stmt.formType || 'N/A'} - ${stmt.statementType}</h3><p>Filing Date: ${formatDateForDisplay(stmt.filingDate)} | Source: <a href="${secLink}" target="_blank" rel="noopener noreferrer">${stmt.sourceFile}</a> | Acc: ${stmt.accessionNumber}</p>`;
+        tableContainer.appendChild(headerDiv);
+
+        const table = document.createElement('table');
+        table.className = 'table table-sm table-bordered equity-table';
+        const thead = table.createTHead();
+        const tbody = table.createTBody();
+
+        // Accessing equityData correctly from the parsedData object
+        const equityData = stmt.parsedData?.equityData || (Array.isArray(stmt.parsedData) ? stmt.parsedData : []);
+        const componentHeaders = stmt.parsedData?.headerData || []; // Get headers from parsedData
+
+        if (!Array.isArray(equityData) || equityData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="100%">No equity line items found.</td></tr>';
+            tableContainer.appendChild(table);
+            return tableContainer;
+        }
+
+        // Create Header Row for components
+        const headerRow = thead.insertRow();
+        headerRow.classList.add("equity-header-row");
+        let thItem = document.createElement('th'); thItem.textContent = "Item"; headerRow.appendChild(thItem);
+        if (componentHeaders.length > 0) {
+            componentHeaders.forEach(headerText => {
+                const th = document.createElement('th');
+                th.textContent = headerText;
+                headerRow.appendChild(th);
             });
-            return tbl;
+        } else { // Fallback if no explicit headers
+             const firstDataRowValues = Object.values(equityData[0])[0];
+             if(Array.isArray(firstDataRowValues)){
+                firstDataRowValues.forEach((_,i) => {
+                    const th = document.createElement('th');
+                    th.textContent = `Component ${i+1}`;
+                    headerRow.appendChild(th);
+                });
+             } else {
+                 headerRow.insertCell().textContent = "Value";
+             }
         }
 
 
-        document.addEventListener('DOMContentLoaded', async (evt) => {
-            const form = document.getElementById('stmtForm');
+        // Create Data Rows
+        equityData.forEach(item => {
+            if (typeof item !== 'object' || item === null) return;
+            const row = tbody.insertRow();
+            const itemKey = Object.keys(item)[0];
+            const itemValues = item[itemKey];
 
-            form.addEventListener('submit', async (evt) => {
-                evt.preventDefault();
+            row.insertCell().textContent = itemKey; // Line item description
 
-                const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
-                const type = document.getElementById('statementTypeInput').value;
-                const formType = document.getElementById('formTypeInput').value;
-                const limit = document.getElementById('limitInput').value;
-                const url = `http://localhost:3000/api/v1/statements/${ticker}?type=equity&limit=${limit}&sortParam=desc&formType=${formType}`;
-
-                const response = await fetch(url);
-                const responseData = await response.json();
-                const stmtData = responseData.data;
-
-                const container = document.getElementById('stmtContainer');
-                container.innerHTML = ''; // Clear old data
-                container.appendChild(transformJSON(stmtData));
-            });
+            if (Array.isArray(itemValues)) {
+                itemValues.forEach(val => {
+                    row.insertCell().textContent = formatNumber(val);
+                });
+                // Pad row with empty cells if necessary
+                const expectedCols = componentHeaders.length > 0 ? componentHeaders.length : (Array.isArray(Object.values(equityData[0])[0]) ? Object.values(equityData[0])[0].length : 1);
+                for (let i = itemValues.length; i < expectedCols; i++) {
+                    row.insertCell().textContent = '-';
+                }
+            } else {
+                  const cell = row.insertCell();
+                  cell.textContent = formatNumber(itemValues);
+                  cell.colSpan = componentHeaders.length > 0 ? componentHeaders.length : 1;
+            }
         });
+
+        tableContainer.appendChild(table);
+        return tableContainer;
+    }
+
+    /**
+     * Your transformJSON for comparative tables (Income, Balance, Cashflow, Equity Summary)
+     */
+    const transformJSON = (data) => {
+        logMessage("transformJSON (Comparative): Starting with data:", data);
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            const p = document.createElement('p'); p.textContent = 'No data for comparative table.'; return p;
+        }
+        const mapOfMasterKeys = new Map(); const columnValueMaps = new Map(); const columnHeaderData = [];
+        const tbl = document.createElement("table");
+        tbl.setAttribute('id', `${data[0].statementType?.toLowerCase() || 'statement'}-comparative`);
+        tbl.setAttribute('class', 'table table-striped table-bordered'); // Bootstrap classes
+        const tHead = tbl.createTHead(); tHead.setAttribute('class', 'thead-light');
+        const tBody = tbl.createTBody(); tbl.appendChild(tHead); tbl.appendChild(tBody);
+        const headerRow = tHead.insertRow(); const headerTitleCell = document.createElement('th');
+        const firstStmtMetadata = data[0]?.parsedData?.metadata;
+        headerTitleCell.innerHTML = `${data[0].statementType?.toUpperCase() || 'STATEMENT'} <br><small>${firstStmtMetadata?.currency || ''} ${firstStmtMetadata?.units || ''}</small>`;
+        headerRow.appendChild(headerTitleCell);
+
+        data.forEach((stmt) => {
+            if (!stmt || !stmt.filingDate || !stmt.sourceFile || !stmt.formType || !stmt.cik || !stmt.accessionNumber) { return; }
+            const uniqueColumnKey = `${getISODate(stmt.filingDate)}_${stmt.formType}_${stmt.sourceFile}`;
+            if (!columnValueMaps.has(uniqueColumnKey)) {
+                columnHeaderData.push({
+                    uniqueKey: uniqueColumnKey, display: `${formatDateForDisplay(stmt.filingDate)} (${stmt.formType} ${stmt.sourceFile})`,
+                    dateForSort: new Date(stmt.filingDate), sourceFileForSort: stmt.sourceFile, cik: stmt.cik,
+                    accessionNumber: stmt.accessionNumber.replace(/-/g, ''), originalSourceFile: stmt.sourceFile
+                });
+                columnValueMaps.set(uniqueColumnKey, new Map());
+            }
+            const currentParsedData = stmt.parsedData?.stmtData || stmt.parsedData; // Adjusted to handle both structures
+            if (Array.isArray(currentParsedData)) {
+                currentParsedData.forEach((entry) => {
+                    if (typeof entry === 'object' && entry !== null && Object.keys(entry).length > 0) {
+                        const itemKey = Object.keys(entry)[0]; const itemValue = entry[itemKey];
+                        if (itemKey && !mapOfMasterKeys.has(itemKey)) { mapOfMasterKeys.set(itemKey, true); }
+                        columnValueMaps.get(uniqueColumnKey).set(itemKey, itemValue);
+                    }
+                });
+            }
+        });
+        columnHeaderData.sort((a, b) => { const d = b.dateForSort.getTime() - a.dateForSort.getTime(); if (d !== 0) return d; return (a.sourceFileForSort || '').localeCompare(b.sourceFileForSort || ''); });
+        columnHeaderData.forEach(colData => { const hC = document.createElement('th'); const a = document.createElement('a'); a.href = `https://www.sec.gov/Archives/edgar/data/${colData.cik}/${colData.accessionNumber}/${colData.originalSourceFile}`; a.target = `_blank`; a.rel = 'noopener noreferrer'; a.innerHTML = colData.display.replace(/ \(/, '<br>('); hC.appendChild(a); headerRow.appendChild(hC); });
+        const orderedMasterKeys = Array.from(mapOfMasterKeys.keys());
+        orderedMasterKeys.forEach((rowLabel) => { if (typeof rowLabel === 'string' && rowLabel.trim().endsWith(':')) { return; } const tr = tBody.insertRow(); tr.insertCell().textContent = rowLabel; columnHeaderData.forEach(colData => { const cell = tr.insertCell(); const items = columnValueMaps.get(colData.uniqueKey); const val = items?.get(rowLabel); cell.innerHTML = formatNumber(val); }); });
+        const container = document.createElement('div'); container.classList.add('table-scroll-container'); container.appendChild(tbl);
+        return container;
+    };
+
+    // DOMContentLoaded and Fetch Logic
+    document.addEventListener('DOMContentLoaded', async (evt) => {
+      const form = document.getElementById('stmtForm');
+      const container = document.getElementById('stmtContainer');
+
+      form.addEventListener('submit', async (evt) => {
+        evt.preventDefault();
+        container.innerHTML = '<p class="text-info">Fetching data...</p>';
+        showLoading(true); // Show loading indicator
+
+        const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+        const type = document.getElementById('statementTypeInput').value; // This will be "" for All Types
+        const formType = document.getElementById('formTypeInput').value;
+        const limit = document.getElementById('limitInput').value;
+        const sort = document.getElementById('sortInput').value;
+
+        const queryParams = new URLSearchParams();
+        // Only add 'type' to query if a specific type is selected
+        if (type) queryParams.append('type', type);
+        if (formType) queryParams.append('formType', formType);
+        if (limit) queryParams.append('limit', limit);
+        if (sort) queryParams.append('sort', sort);
+
+        const url = `http://localhost:3000/api/v1/statements/${ticker}?${queryParams.toString()}`;
+        logMessage("Fetching URL:", url);
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status} - ${errText.substring(0,100)}`);
+            }
+            const responseData = await response.json();
+            logMessage("API Response:", responseData);
+
+            // Using your corrected check
+            if (responseData.statusCode === 200 && Array.isArray(responseData.data)) {
+                container.innerHTML = ''; // Clear loading message
+                if (responseData.data.length > 0) {
+                    displayStatements(responseData.data); // Call the router function
+                    showStatus(`Successfully displayed ${responseData.data.length} statements.`);
+                } else {
+                    showInfo(`No statements found matching the criteria.`);
+                }
+            } else {
+                throw new Error(responseData.messageTxt || "Invalid data structure from API.");
+            }
+        } catch (error) {
+            console.error("Fetch or transform error:", error);
+            showError(`Error: ${error.message}`);
+        } finally {
+            showLoading(false); // Hide loading indicator
+        }
+      });
+    });
     </script>
 
-
-    <!-- Bootstrap loaders -->
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
-        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
-        crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
-        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
-        crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
-        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
-        crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 </body>
-
 </html>
